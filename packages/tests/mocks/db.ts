@@ -69,7 +69,7 @@ export const mockDb = {
   project: {
     count: vi.fn(),
     findUnique: vi.fn(),
-    findFirst: vi.fn(),
+    findFirst: vi.fn().mockResolvedValue({ firmId: "firm-1" }),
     findMany: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),

@@ -52,7 +52,16 @@ export const ProjectModel = {
     const firm = await FirmModel.ensureDefaultForUser(userId);
 
     const projects = await db.project.findMany({
-      where: { firmId: firm.firmId },
+      where: {
+        firmId: firm.firmId,
+        // Include projects that are either:
+        // - open (no project memberships at all), OR
+        // - ring-fenced but the user has explicit access
+        OR: [
+          { projectMemberships: { none: {} } },
+          { projectMemberships: { some: { userId } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -83,6 +92,11 @@ export const ProjectModel = {
       where: {
         id: input.projectId,
         firmId: firm.firmId,
+        // Enforce project-level membership: open projects OR user has explicit access
+        OR: [
+          { projectMemberships: { none: {} } },
+          { projectMemberships: { some: { userId: input.userId } } },
+        ],
       },
       select: {
         id: true,
@@ -150,5 +164,62 @@ export const ProjectModel = {
     });
 
     return result.count > 0;
+  },
+
+  // ── Project-level membership (ring-fencing) ───────────────────────────────
+
+  async addMember(input: {
+    projectId: string;
+    userId: string;
+    firmId: string;
+    actorUserId: string;
+  }): Promise<void> {
+    await db.projectMembership.upsert({
+      where: {
+        projectId_userId: {
+          projectId: input.projectId,
+          userId: input.userId,
+        },
+      },
+      create: {
+        projectId: input.projectId,
+        userId: input.userId,
+        firmId: input.firmId,
+      },
+      update: {},
+    });
+  },
+
+  async removeMember(input: {
+    projectId: string;
+    userId: string;
+  }): Promise<void> {
+    await db.projectMembership.deleteMany({
+      where: {
+        projectId: input.projectId,
+        userId: input.userId,
+      },
+    });
+  },
+
+  async listMembers(projectId: string): Promise<
+    Array<{ userId: string; name: string | null; email: string; createdAt: Date }>
+  > {
+    const memberships = await db.projectMembership.findMany({
+      where: { projectId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return memberships.map((m) => ({
+      userId: m.userId,
+      name: m.user.name,
+      email: m.user.email,
+      createdAt: m.createdAt,
+    }));
+  },
+
+  async isRingFenced(projectId: string): Promise<boolean> {
+    const count = await db.projectMembership.count({ where: { projectId } });
+    return count > 0;
   },
 };

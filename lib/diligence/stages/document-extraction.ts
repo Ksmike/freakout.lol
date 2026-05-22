@@ -20,7 +20,7 @@ import {
 export async function runDocumentExtraction(
   ctx: StageContext
 ): Promise<StageExecutionResult> {
-  const prefix = buildProjectBlobPrefix(ctx.userId, ctx.projectId);
+  const prefix = buildProjectBlobPrefix(ctx.firmId, ctx.projectId);
   if (!prefix) {
     throw new DiligenceFatalError("Invalid project storage prefix.");
   }

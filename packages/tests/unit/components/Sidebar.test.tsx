@@ -2,6 +2,17 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { Sidebar } from "@/components/Sidebar";
 
+vi.mock("@/lib/active-firm", () => ({
+  getActiveFirmIdFromCookie: vi.fn().mockResolvedValue(null),
+  setActiveFirmCookie: vi.fn().mockResolvedValue(undefined),
+  clearActiveFirmCookie: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/actions/firm", () => ({
+  switchFirm: vi.fn(),
+  listUserFirms: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@/lib/actions/auth", () => ({
   logout: vi.fn(),
 }));

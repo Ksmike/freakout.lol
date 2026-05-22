@@ -18,6 +18,9 @@ vi.mock("@vercel/blob", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    project: {
+      findFirst: vi.fn().mockResolvedValue({ firmId: "firm-1" }),
+    },
     projectDocument: {
       upsert: projectDocumentUpsertMock,
       findMany: projectDocumentFindManyMock,
@@ -65,7 +68,7 @@ describe("projects documents API route", () => {
   it("uploads a supported private document into user/project path", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     putMock.mockResolvedValue({
-      pathname: "user-1/project-1/report.pdf",
+      pathname: "firm-1/project-1/report.pdf",
       url: "https://blob.local/private-url",
       downloadUrl: "https://blob.local/private-url?download=1",
     });
@@ -87,7 +90,7 @@ describe("projects documents API route", () => {
 
     expect(response.status).toBe(201);
     expect(putMock).toHaveBeenCalledWith(
-      "user-1/project-1/report.pdf",
+      "firm-1/project-1/report.pdf",
       expect.any(File),
       expect.objectContaining({
         access: "private",
@@ -97,13 +100,13 @@ describe("projects documents API route", () => {
     );
 
     const body = await response.json();
-    expect(body.document.pathname).toBe("user-1/project-1/report.pdf");
+    expect(body.document.pathname).toBe("firm-1/project-1/report.pdf");
   });
 
   it("uploads a supported PowerPoint document", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     putMock.mockResolvedValue({
-      pathname: "user-1/project-1/investor-deck.pptx",
+      pathname: "firm-1/project-1/investor-deck.pptx",
       url: "https://blob.local/private-url",
       downloadUrl: "https://blob.local/private-url?download=1",
     });
@@ -127,7 +130,7 @@ describe("projects documents API route", () => {
 
     expect(response.status).toBe(201);
     expect(putMock).toHaveBeenCalledWith(
-      "user-1/project-1/investor-deck.pptx",
+      "firm-1/project-1/investor-deck.pptx",
       expect.any(File),
       expect.objectContaining({
         access: "private",
@@ -184,7 +187,7 @@ describe("projects documents API route", () => {
   it("rate-limits repeated uploads", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     putMock.mockResolvedValue({
-      pathname: "user-1/project-1/report.pdf",
+      pathname: "firm-1/project-1/report.pdf",
       url: "https://blob.local/private-url",
       downloadUrl: "https://blob.local/private-url?download=1",
     });
@@ -230,7 +233,7 @@ describe("projects documents API route", () => {
     listMock.mockResolvedValue({
       blobs: [
         {
-          pathname: "user-1/project-1/folder/report.pdf",
+          pathname: "firm-1/project-1/folder/report.pdf",
           size: 42,
           uploadedAt: new Date("2026-05-06T00:00:00.000Z"),
           url: "https://blob.local/private-url",
@@ -249,13 +252,13 @@ describe("projects documents API route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(listMock).toHaveBeenCalledWith({ prefix: "user-1/project-1/" });
+    expect(listMock).toHaveBeenCalledWith({ prefix: "firm-1/project-1/" });
 
     const body = await response.json();
     expect(body.documents).toEqual([
       expect.objectContaining({
         filename: "folder/report.pdf",
-        pathname: "user-1/project-1/folder/report.pdf",
+        pathname: "firm-1/project-1/folder/report.pdf",
       }),
     ]);
   });

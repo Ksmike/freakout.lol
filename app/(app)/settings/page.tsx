@@ -13,6 +13,8 @@ import {
   getActiveFirmSummary,
   listFirmAuditLogs,
   listFirmMembers,
+  listPendingInvitations,
+  revokeInvitation,
   updateFirmMemberRole,
 } from "@/lib/actions/firm";
 import { getBillingSummary, createCheckoutSession, createPortalSession } from "@/lib/actions/billing";
@@ -35,13 +37,14 @@ const MANAGEABLE_ROLES = [
 
 export default async function SettingsPage() {
   const { labels } = getLabelsForLocale("en");
-  const [apiKeyStatuses, firm, members, auditLogs, billing, availableGraphs] = await Promise.all([
+  const [apiKeyStatuses, firm, members, auditLogs, billing, availableGraphs, pendingInvites] = await Promise.all([
     getApiKeyStatuses(),
     getActiveFirmSummary(),
     listFirmMembers(),
     listFirmAuditLogs(),
     getBillingSummary(),
     listAvailableGraphs(),
+    listPendingInvitations(),
   ]);
   const t = labels.app.settings;
   const tGraph = labels.app.graphWorkflow;
@@ -231,6 +234,46 @@ export default async function SettingsPage() {
               </form>
             ))}
           </div>
+
+          {/* Pending invitations */}
+          {pendingInvites.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-foreground/45">
+                Pending invitations
+              </p>
+              {pendingInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-divider bg-content1 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {invite.email}
+                    </p>
+                    <p className="text-xs text-foreground/50">
+                      {invite.role} · expires{" "}
+                      {new Date(invite.expiresAt).toLocaleDateString("en", {
+                        dateStyle: "medium",
+                      })}
+                    </p>
+                  </div>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await revokeInvitation(invite.id);
+                    }}
+                  >
+                    <button
+                      type="submit"
+                      className="shrink-0 rounded-md border border-divider px-3 py-1.5 text-xs font-medium text-foreground/60 transition-colors hover:bg-content2"
+                    >
+                      Revoke
+                    </button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

@@ -11,6 +11,23 @@ vi.mock("@/lib/auth", () => ({
   auth: authMock,
 }));
 
+vi.mock("@/lib/models/FirmModel", () => ({
+  FirmModel: {
+    ensureDefaultForUser: vi.fn().mockResolvedValue({ firmId: "firm-1", role: "OWNER" }),
+  },
+}));
+
+vi.mock("@/lib/models/AuditLogModel", () => ({
+  AuditLogModel: {
+    record: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  generateRequestId: vi.fn().mockReturnValue("test-req-id"),
+}));
+
 vi.mock("@vercel/blob", () => ({
   get: getMock,
   del: delMock,
@@ -26,6 +43,7 @@ vi.mock("@/lib/models/ProjectDocumentModel", () => ({
 vi.mock("@/lib/db", () => ({
   db: {
     project: {
+      findFirst: vi.fn().mockResolvedValue({ firmId: "firm-1" }),
       updateMany: projectUpdateManyMock,
     },
   },
@@ -87,7 +105,7 @@ describe("project document read route", () => {
       }),
     });
 
-    expect(getMock).toHaveBeenCalledWith("user-1/project-1/folder/report.pdf", {
+    expect(getMock).toHaveBeenCalledWith("firm-1/project-1/folder/report.pdf", {
       access: "private",
     });
     expect(response.status).toBe(404);
@@ -107,7 +125,7 @@ describe("project document read route", () => {
       blob: {
         url: "https://blob.local/private-url",
         downloadUrl: "https://blob.local/private-url?download=1",
-        pathname: "user-1/project-1/report.txt",
+        pathname: "firm-1/project-1/report.txt",
         contentDisposition: "inline",
         cacheControl: "private, max-age=0",
         uploadedAt: new Date("2026-05-06T00:00:00.000Z"),
@@ -149,7 +167,7 @@ describe("project document read route", () => {
       }),
     });
 
-    expect(delMock).toHaveBeenCalledWith("user-1/project-1/folder/report.pdf");
+    expect(delMock).toHaveBeenCalledWith("firm-1/project-1/folder/report.pdf");
     expect(deleteForProjectPathMock).toHaveBeenCalled();
     expect(response.status).toBe(200);
   });
@@ -170,7 +188,7 @@ describe("project document read route", () => {
     expect(markQueuedForProjectPathMock).toHaveBeenCalledWith({
       projectId: "project-1",
       userId: "user-1",
-      pathname: "user-1/project-1/folder/report.pdf",
+      pathname: "firm-1/project-1/folder/report.pdf",
     });
     expect(projectUpdateManyMock).toHaveBeenCalled();
     expect(response.status).toBe(200);

@@ -89,6 +89,13 @@ export async function POST(
     return Response.json({ error: uploadCheck.reason }, { status: 402 });
   }
 
+  // Look up firmId for blob path scoping
+  const projectRecord = await (await import("@/lib/db")).db.project.findFirst({
+    where: { id: sanitizedProjectId, userId },
+    select: { firmId: true },
+  });
+  const blobScopeId = projectRecord?.firmId ?? userId; // fallback for legacy
+
   let file: File | null = null;
   try {
     const formData = await request.formData();
@@ -116,7 +123,7 @@ export async function POST(
   }
 
   const pathname = buildProjectBlobPath(
-    userId,
+    blobScopeId,
     sanitizedProjectId,
     sanitizedFilename
   );
@@ -211,7 +218,14 @@ export async function GET(
     return Response.json({ error: INVALID_PROJECT_ID_ERROR }, { status: 400 });
   }
 
-  const prefix = buildProjectBlobPrefix(userId, sanitizedProjectId);
+  // Look up firmId for blob path scoping
+  const projectForList = await (await import("@/lib/db")).db.project.findFirst({
+    where: { id: sanitizedProjectId, userId },
+    select: { firmId: true },
+  });
+  const listScopeId = projectForList?.firmId ?? userId;
+
+  const prefix = buildProjectBlobPrefix(listScopeId, sanitizedProjectId);
   if (!prefix) {
     return Response.json({ error: "Invalid storage path." }, { status: 400 });
   }

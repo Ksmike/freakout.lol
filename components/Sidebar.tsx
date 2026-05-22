@@ -7,7 +7,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FiChevronLeft } from "react-icons/fi";
 import { LogoutButton } from "@/components/LogoutButton";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { FirmSwitcher } from "@/components/FirmSwitcher";
 import { getProjectForSidebar, getRecentProjects, type RecentProject } from "@/lib/actions/sidebar";
+import type { UserFirmSummary } from "@/lib/actions/firm";
 
 export const navItems = [
   { label: "Dashboard", href: "/dashboard" },
@@ -34,7 +36,7 @@ function buildProjectSubNav(input: {
   ];
 }
 
-export function Sidebar() {
+export function Sidebar({ firms = [] }: { firms?: UserFirmSummary[] }) {
   const pathname = usePathname();
   const projectMatch = pathname.match(/^\/project\/([^/]+)/);
   const projectId = projectMatch?.[1] ?? null;
@@ -150,9 +152,12 @@ export function Sidebar() {
           <DefaultNav pathname={pathname} recentProjects={recentProjects} />
         )}
       </nav>
-      <div className="flex items-center justify-between border-t border-divider pt-3">
-        <LogoutButton />
-        <ThemeSwitcher />
+      <div className="space-y-1 border-t border-divider pt-3">
+        {firms.length > 1 && <FirmSwitcher firms={firms} />}
+        <div className="flex items-center justify-between">
+          <LogoutButton />
+          <ThemeSwitcher />
+        </div>
       </div>
     </aside>
   );

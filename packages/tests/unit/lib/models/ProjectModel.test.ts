@@ -65,7 +65,13 @@ describe("ProjectModel", () => {
         { id: "p2", name: "Project B", status: "inprogress" },
       ]);
       expect(mockDb.project.findMany).toHaveBeenCalledWith({
-        where: { firmId: "firm-1" },
+        where: {
+          firmId: "firm-1",
+          OR: [
+            { projectMemberships: { none: {} } },
+            { projectMemberships: { some: { userId: "user-1" } } },
+          ],
+        },
         orderBy: { createdAt: "desc" },
         select: { id: true, name: true, status: true },
       });
@@ -114,7 +120,14 @@ describe("ProjectModel", () => {
         firmId: "firm-1",
       });
       expect(mockDb.project.findFirst).toHaveBeenCalledWith({
-        where: { id: "p1", firmId: "firm-1" },
+        where: {
+          id: "p1",
+          firmId: "firm-1",
+          OR: [
+            { projectMemberships: { none: {} } },
+            { projectMemberships: { some: { userId: "user-1" } } },
+          ],
+        },
         select: {
           id: true,
           name: true,

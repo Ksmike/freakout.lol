@@ -93,8 +93,8 @@ vi.mock("@vercel/blob", () => ({
 }));
 
 vi.mock("@/lib/blob/documents", () => ({
-  buildProjectBlobPrefix: (userId: string, projectId: string) =>
-    `users/${userId}/projects/${projectId}/`,
+  buildProjectBlobPrefix: (firmId: string, projectId: string) =>
+    `${firmId}/${projectId}/`,
 }));
 
 const mockCountForProject = vi.fn();

@@ -34,8 +34,29 @@ model Project {
     auditLogs                        AuditLog[]
     assistanceGoal                   AssistanceGoal?
     evidenceMappings                 EvidenceMapping[]
+    projectMemberships               ProjectMembership[]
 
     @@index([userId])
     @@index([firmId, createdAt])
     @@index([firmId, status])
+}
+
+// ─── Project-level membership (optional ring-fencing) ────────────────────────
+// When a project has any ProjectMembership rows, only those members can access it.
+// Projects with no memberships are visible to all firm members with projects.view_all.
+
+model ProjectMembership {
+    id        String   @id @default(cuid())
+    projectId String
+    userId    String
+    firmId    String
+    createdAt DateTime @default(now())
+
+    project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    firm    Firm    @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+    @@unique([projectId, userId])
+    @@index([projectId])
+    @@index([userId, firmId])
 }

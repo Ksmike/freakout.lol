@@ -43,6 +43,7 @@ export async function register(formData: FormData) {
   const name = ((formData.get("name") as string | null) ?? "").trim() || null;
   const acceptedTerms = formData.get("acceptedTerms") === "on";
   const emailOptIn = formData.get("emailOptIn") === "on";
+  const inviteToken = ((formData.get("inviteToken") as string | null) ?? "").trim() || null;
 
   if (!email || !password) {
     return { error: "Email and password are required" };
@@ -89,11 +90,22 @@ export async function register(formData: FormData) {
     },
   });
 
+  // If the user registered via an invitation link, accept it immediately
+  if (inviteToken) {
+    const { InvitationModel } = await import("@/lib/models/InvitationModel");
+    const newUser = await db.user.findUnique({ where: { email }, select: { id: true } });
+    if (newUser) {
+      await InvitationModel.accept(inviteToken, newUser.id).catch(() => {
+        // Best-effort — don't block registration if invite acceptance fails
+      });
+    }
+  }
+
   // Auto sign-in after registration
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/dashboard",
+    redirectTo: inviteToken ? "/dashboard" : "/dashboard",
   });
 }
 

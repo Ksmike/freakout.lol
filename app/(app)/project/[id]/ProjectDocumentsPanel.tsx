@@ -47,6 +47,7 @@ type DiligenceJobSummary = {
     stage: DiligenceStageName;
     status: DiligenceStageStatus;
     attempts: number;
+    errorMessage: string | null;
     updatedAt: Date;
   }>;
 };
@@ -105,6 +106,8 @@ type ProjectDocumentsPanelLabels = {
   diligenceCostEstimateLabel: string;
   diligenceLastErrorLabel: string;
   diligenceNoJobMessage: string;
+  diligenceFailedStageLabel: string;
+  diligenceAttemptsLabel: string;
   diligenceJobCreatedToast: string;
   diligenceRunningToast: string;
   diligenceCompletedToast: string;
@@ -1073,6 +1076,58 @@ export function ProjectDocumentsPanel({
                 )}
               </AnimatePresence>
 
+              {/* Dead-letter panel — shown when job is FAILED with a failed stage */}
+              <AnimatePresence>
+                {diligenceJob.status === "FAILED" && (() => {
+                  const failedStage = [...diligenceJob.stageRuns]
+                    .reverse()
+                    .find((sr) => sr.status === "FAILED");
+                  if (!failedStage) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.22 }}
+                      className="rounded-lg border border-danger/30 bg-danger/5 p-3 space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-danger/70">
+                            {labels.diligenceFailedStageLabel}
+                          </p>
+                          <p className="mt-0.5 text-sm font-medium text-foreground">
+                            {labels.diligenceStages[failedStage.stage]}
+                          </p>
+                          {failedStage.attempts > 1 && (
+                            <p className="mt-0.5 text-xs text-foreground/50">
+                              {labels.diligenceAttemptsLabel}: {failedStage.attempts}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleRetryDiligence()}
+                          disabled={isRetryingDiligence}
+                          className="shrink-0 inline-flex items-center gap-1.5 rounded-md bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:opacity-90 disabled:opacity-60"
+                        >
+                          <LuRefreshCw
+                            aria-hidden="true"
+                            className={`size-3.5 ${isRetryingDiligence ? "animate-spin" : ""}`}
+                          />
+                          {labels.retryDiligenceCta}
+                        </button>
+                      </div>
+                      {failedStage.errorMessage && (
+                        <p className="rounded-md bg-danger/10 px-2.5 py-2 text-xs text-danger break-words leading-relaxed font-mono">
+                          {failedStage.errorMessage}
+                        </p>
+                      )}
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+
               <div className="h-2 overflow-hidden rounded-full bg-content2">
                 <motion.div
                   className={`h-full bg-primary ${
@@ -1087,6 +1142,7 @@ export function ProjectDocumentsPanel({
                 <motion.ul layout className="space-y-1">
                   {diligenceJob.stageRuns.map((stageRun) => {
                     const isCurrentStage = stageRun.status === "RUNNING";
+                    const hasFailed = stageRun.status === "FAILED";
                     return (
                       <motion.li
                         key={stageRun.stage}
@@ -1094,23 +1150,37 @@ export function ProjectDocumentsPanel({
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2 }}
-                        className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-xs ${stageStatusClassName(
+                        className={`rounded-md border px-2.5 py-1.5 text-xs ${stageStatusClassName(
                           stageRun.status,
                           isCurrentStage
                         )}`}
                       >
-                        <span className="min-w-0 truncate text-foreground">
-                          {labels.diligenceStages[stageRun.stage]}
-                        </span>
-                        <motion.span
-                          key={`${stageRun.stage}-${stageRun.status}-${stageRun.attempts}`}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.14 }}
-                          className={stageStatusTextClassName(stageRun.status)}
-                        >
-                          {stageRun.status}
-                        </motion.span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate text-foreground">
+                            {labels.diligenceStages[stageRun.stage]}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {stageRun.attempts > 1 && (
+                              <span className="text-foreground/50">
+                                {stageRun.attempts}×
+                              </span>
+                            )}
+                            <motion.span
+                              key={`${stageRun.stage}-${stageRun.status}-${stageRun.attempts}`}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.14 }}
+                              className={stageStatusTextClassName(stageRun.status)}
+                            >
+                              {stageRun.status}
+                            </motion.span>
+                          </div>
+                        </div>
+                        {hasFailed && stageRun.errorMessage && (
+                          <p className="mt-1.5 break-words text-danger/80 leading-snug">
+                            {stageRun.errorMessage}
+                          </p>
+                        )}
                       </motion.li>
                     );
                   })}

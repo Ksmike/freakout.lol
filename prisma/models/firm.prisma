@@ -26,15 +26,17 @@ model Firm {
     createdAt         DateTime @default(now())
     updatedAt         DateTime @updatedAt
 
-    memberships      FirmMembership[]
-    projects         Project[]
-    auditLogs        AuditLog[]
-    billingCustomer  BillingCustomer?
-    planEntitlement  PlanEntitlement?
-    usageMeter       UsageMeter?
-    invoiceEvents    InvoiceEvent[]
-    graphEnablements FirmGraphEnablement[]
-    evidenceMappings EvidenceMapping[]
+    memberships        FirmMembership[]
+    projects           Project[]
+    auditLogs          AuditLog[]
+    billingCustomer    BillingCustomer?
+    planEntitlement    PlanEntitlement?
+    usageMeter         UsageMeter?
+    invoiceEvents      InvoiceEvent[]
+    graphEnablements   FirmGraphEnablement[]
+    evidenceMappings   EvidenceMapping[]
+    invitations        FirmInvitation[]
+    projectMemberships ProjectMembership[]
 
     @@index([billingStatus])
     @@index([plan])
@@ -57,4 +59,24 @@ model FirmMembership {
     @@unique([firmId, userId])
     @@index([userId, status])
     @@index([firmId, role])
+}
+
+// ─── Firm invitations (for users not yet registered) ─────────────────────────
+
+model FirmInvitation {
+    id         String    @id @default(cuid())
+    firmId     String
+    email      String
+    role       FirmRole  @default(ANALYST)
+    token      String    @unique
+    invitedBy  String // userId of the inviter
+    expiresAt  DateTime
+    acceptedAt DateTime?
+    createdAt  DateTime  @default(now())
+
+    firm Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+    @@index([firmId])
+    @@index([email])
+    @@index([token])
 }

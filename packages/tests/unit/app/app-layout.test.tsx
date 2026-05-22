@@ -15,6 +15,10 @@ vi.mock("@/lib/auth", () => ({
   }),
 }));
 
+vi.mock("@/lib/actions/firm", () => ({
+  listUserFirms: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@/components/providers/Providers", () => ({
   Providers: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="providers">{children}</div>

@@ -133,6 +133,8 @@ export type AppLabels = {
       diligenceCostEstimateLabel: string;
       diligenceLastErrorLabel: string;
       diligenceNoJobMessage: string;
+      diligenceFailedStageLabel: string;
+      diligenceAttemptsLabel: string;
       diligenceJobCreatedToast: string;
       diligenceRunningToast: string;
       diligenceCompletedToast: string;

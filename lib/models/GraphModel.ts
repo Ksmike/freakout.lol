@@ -115,6 +115,7 @@ export const GraphModel = {
       where: { id: graphId },
       include: {
         nodes: { orderBy: { kind: "asc" } },
+        edges: true,
         evidenceRequirements: {
           include: { node: true },
           orderBy: [{ node: { kind: "asc" } }, { priority: "asc" }],
@@ -365,6 +366,20 @@ export const GraphModel = {
     });
   },
 
+  async updateGraphMeta(input: {
+    graphId: string;
+    name: string;
+    description?: string;
+  }): Promise<void> {
+    await db.knowledgeGraphDefinition.update({
+      where: { id: input.graphId },
+      data: {
+        name: input.name,
+        description: input.description ?? null,
+      },
+    });
+  },
+
   async publishGraph(graphId: string): Promise<void> {
     await db.knowledgeGraphDefinition.update({
       where: { id: graphId },
@@ -397,6 +412,49 @@ export const GraphModel = {
         metadata: (input.metadata as Prisma.InputJsonValue) ?? null,
       },
     });
+  },
+
+  async updateNode(input: {
+    nodeId: string;
+    graphId: string;
+    label: string;
+    description?: string;
+  }): Promise<void> {
+    await db.ontologyNode.update({
+      where: { id: input.nodeId },
+      data: {
+        label: input.label,
+        description: input.description ?? null,
+      },
+    });
+  },
+
+  async deleteNode(nodeId: string): Promise<void> {
+    await db.ontologyNode.delete({ where: { id: nodeId } });
+  },
+
+  async addEdge(input: {
+    graphId: string;
+    sourceId: string;
+    targetId: string;
+    kind: string;
+  }) {
+    return db.ontologyEdge.create({
+      data: {
+        graphId: input.graphId,
+        sourceId: input.sourceId,
+        targetId: input.targetId,
+        kind: input.kind as Parameters<typeof db.ontologyEdge.create>[0]["data"]["kind"],
+      },
+    });
+  },
+
+  async deleteEdge(edgeId: string): Promise<void> {
+    await db.ontologyEdge.delete({ where: { id: edgeId } });
+  },
+
+  async deleteRequirement(requirementId: string): Promise<void> {
+    await db.evidenceRequirement.delete({ where: { id: requirementId } });
   },
 
   async addRequirement(input: {

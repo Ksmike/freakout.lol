@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import {
   getFirmPermissions,
@@ -8,7 +9,15 @@ import {
 } from "@/lib/authz/permissions";
 import { AuditLogModel } from "@/lib/models/AuditLogModel";
 import { FirmModel } from "@/lib/models/FirmModel";
+import { InvitationModel } from "@/lib/models/InvitationModel";
 import { AuditAction, FirmRole } from "@/lib/generated/prisma/client";
+import { resend, FROM_ADDRESS, getAppUrl } from "@/lib/email";
+import { renderInviteEmail } from "@/lib/emails/render-invite";
+import { inviteEmailText } from "@/lib/emails/invite";
+import {
+  getActiveFirmIdFromCookie,
+  setActiveFirmCookie,
+} from "@/lib/active-firm";
 
 export type ActiveFirmSummary = {
   id: string;
@@ -62,7 +71,11 @@ export async function getActiveFirmSummary(): Promise<ActiveFirmSummary | null> 
     return null;
   }
 
-  const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
+  const preferredFirmId = await getActiveFirmIdFromCookie();
+  const firm = await FirmModel.getActiveFirmSummaryForUser(
+    session.user.id,
+    preferredFirmId
+  );
 
   return {
     id: firm.firmId,
@@ -125,7 +138,7 @@ export async function listFirmAuditLogs(): Promise<FirmAuditLogSummary[]> {
 
 export async function addFirmMemberByEmail(
   formData: FormData
-): Promise<{ error?: string }> {
+): Promise<{ error?: string; invited?: boolean }> {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: "Not authenticated." };
@@ -158,7 +171,42 @@ export async function addFirmMemberByEmail(
   });
 
   if (!result.added) {
-    return { error: "User not found. Ask them to register first." };
+    // User not registered — send an email invitation instead
+    const session2 = await auth();
+    const inviterName = session2?.user?.name ?? session2?.user?.email ?? "A team member";
+
+    const invitation = await InvitationModel.create({
+      firmId: firm.firmId,
+      email,
+      role,
+      invitedBy: session.user.id,
+    });
+
+    const acceptUrl = `${getAppUrl()}/invite/${invitation.token}`;
+    const html = await renderInviteEmail({
+      firmName: firm.name,
+      inviterName,
+      role,
+      acceptUrl,
+      expiresInDays: 7,
+    });
+
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: email,
+      subject: `You've been invited to join ${firm.name} on KG Qualify`,
+      html,
+      text: inviteEmailText({
+        firmName: firm.name,
+        inviterName,
+        role,
+        acceptUrl,
+        expiresInDays: 7,
+      }),
+    });
+
+    revalidatePath("/settings");
+    return { invited: true };
   }
   await AuditLogModel.record({
     firmId: firm.firmId,
@@ -221,4 +269,99 @@ export async function updateFirmMemberRole(
 
   revalidatePath("/settings");
   return {};
+}
+
+export type PendingInvitationSummary = {
+  id: string;
+  email: string;
+  role: FirmRole;
+  expiresAt: string;
+  createdAt: string;
+};
+
+export async function listPendingInvitations(): Promise<PendingInvitationSummary[]> {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
+  if (!hasFirmPermission(firm.role, "members.invite")) return [];
+
+  const { InvitationModel } = await import("@/lib/models/InvitationModel");
+  const invites = await InvitationModel.listPendingForFirm(firm.firmId);
+
+  return invites.map((inv) => ({
+    id: inv.id,
+    email: inv.email,
+    role: inv.role,
+    expiresAt: inv.expiresAt.toISOString(),
+    createdAt: inv.createdAt.toISOString(),
+  }));
+}
+
+export async function revokeInvitation(
+  invitationId: string
+): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
+  if (!hasFirmPermission(firm.role, "members.invite")) {
+    return { error: "You do not have permission to revoke invitations." };
+  }
+
+  const { InvitationModel } = await import("@/lib/models/InvitationModel");
+  const revoked = await InvitationModel.revoke(invitationId, firm.firmId);
+  if (!revoked) return { error: "Invitation not found." };
+
+  revalidatePath("/settings");
+  return {};
+}
+
+export type UserFirmSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  role: FirmRole;
+  plan: string;
+  isActive: boolean;
+};
+
+export async function listUserFirms(): Promise<UserFirmSummary[]> {
+  const session = await auth();
+  if (!session?.user?.id) return [];
+
+  const [firms, activeFirmId] = await Promise.all([
+    FirmModel.listFirmsForUser(session.user.id),
+    getActiveFirmIdFromCookie(),
+  ]);
+
+  // Determine which firm is currently active
+  const resolvedActiveId =
+    activeFirmId && firms.some((f) => f.firmId === activeFirmId)
+      ? activeFirmId
+      : firms[0]?.firmId ?? null;
+
+  return firms.map((f) => ({
+    id: f.firmId,
+    name: f.name,
+    slug: f.slug,
+    role: f.role,
+    plan: f.plan,
+    isActive: f.firmId === resolvedActiveId,
+  }));
+}
+
+export async function switchFirm(firmId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+
+  // Validate the user is actually a member of this firm
+  const firms = await FirmModel.listFirmsForUser(session.user.id);
+  const target = firms.find((f) => f.firmId === firmId);
+  if (!target) return;
+
+  await setActiveFirmCookie(firmId);
+
+  // Redirect to dashboard so all server components re-render with the new firm
+  redirect("/dashboard");
 }

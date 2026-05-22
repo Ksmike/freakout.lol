@@ -46,7 +46,7 @@ export async function enableGraph(
   await AuditLogModel.record({
     firmId: firm.firmId,
     actorUserId: session.user.id,
-    action: AuditAction.PROJECT_CREATED, // reuse closest available; GRAPH_ENABLED pending
+    action: AuditAction.GRAPH_ENABLED,
     targetType: "KnowledgeGraphDefinition",
     targetId: graphId,
   });
@@ -67,6 +67,14 @@ export async function disableGraph(
   }
 
   await GraphModel.disableForFirm({ firmId: firm.firmId, graphId });
+
+  await AuditLogModel.record({
+    firmId: firm.firmId,
+    actorUserId: session.user.id,
+    action: AuditAction.GRAPH_DISABLED,
+    targetType: "KnowledgeGraphDefinition",
+    targetId: graphId,
+  });
 
   revalidatePath("/settings");
   return {};
@@ -178,4 +186,147 @@ export async function deprecateGraph(
   await GraphModel.deprecateGraph(graphId);
   revalidatePath("/admin/graphs");
   return {};
+}
+
+// ── Graph Studio: create / edit graph definitions ────────────────────────────
+
+export async function createGraph(formData: FormData): Promise<{ error?: string; id?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const name = (formData.get("name") as string | null)?.trim();
+  const slug = (formData.get("slug") as string | null)?.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const description = (formData.get("description") as string | null)?.trim() || undefined;
+
+  if (!name || !slug) return { error: "Name and slug are required." };
+
+  try {
+    const graph = await GraphModel.createGraph({ slug, name, description });
+    revalidatePath("/admin/graphs");
+    return { id: graph.id };
+  } catch {
+    return { error: "A graph with that slug already exists." };
+  }
+}
+
+export async function updateGraphMeta(input: {
+  graphId: string;
+  name: string;
+  description?: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  await GraphModel.updateGraphMeta(input);
+  revalidatePath("/admin/graphs");
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return {};
+}
+
+export async function addGraphNode(input: {
+  graphId: string;
+  slug: string;
+  label: string;
+  description?: string;
+  kind: string;
+}): Promise<{ error?: string; id?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  try {
+    const node = await GraphModel.addNode(input);
+    revalidatePath(`/admin/graphs/${input.graphId}`);
+    return { id: node.id };
+  } catch {
+    return { error: "A node with that slug already exists in this graph." };
+  }
+}
+
+export async function updateGraphNode(input: {
+  nodeId: string;
+  graphId: string;
+  label: string;
+  description?: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  await GraphModel.updateNode(input);
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return {};
+}
+
+export async function deleteGraphNode(input: {
+  nodeId: string;
+  graphId: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  await GraphModel.deleteNode(input.nodeId);
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return {};
+}
+
+export async function addGraphEdge(input: {
+  graphId: string;
+  sourceId: string;
+  targetId: string;
+  kind: string;
+}): Promise<{ error?: string; id?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  try {
+    const edge = await GraphModel.addEdge(input);
+    revalidatePath(`/admin/graphs/${input.graphId}`);
+    return { id: edge.id };
+  } catch {
+    return { error: "That edge already exists." };
+  }
+}
+
+export async function deleteGraphEdge(input: {
+  edgeId: string;
+  graphId: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  await GraphModel.deleteEdge(input.edgeId);
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return {};
+}
+
+export async function addGraphRequirement(input: {
+  graphId: string;
+  nodeId: string;
+  title: string;
+  description?: string;
+  priority?: string;
+}): Promise<{ error?: string; id?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  const req = await GraphModel.addRequirement(input);
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return { id: req.id };
+}
+
+export async function deleteGraphRequirement(input: {
+  requirementId: string;
+  graphId: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated." };
+
+  await GraphModel.deleteRequirement(input.requirementId);
+  revalidatePath(`/admin/graphs/${input.graphId}`);
+  return {};
+}
+
+export async function getGraphDetail(graphId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  return GraphModel.findById(graphId);
 }

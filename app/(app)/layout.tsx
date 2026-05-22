@@ -1,7 +1,9 @@
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { Providers } from "@/components/providers/Providers";
+import { FirmSwitcher } from "@/components/FirmSwitcher";
 import { auth } from "@/lib/auth";
+import { listUserFirms } from "@/lib/actions/firm";
 
 export default async function AppLayout({
   children,
@@ -19,6 +21,8 @@ export default async function AppLayout({
       }
     : null;
 
+  const firms = user ? await listUserFirms() : [];
+
   return (
     <Providers user={user}>
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-x-clip md:flex-row">
@@ -31,7 +35,7 @@ export default async function AppLayout({
         </header>
 
         {/* Desktop sidebar */}
-        <Sidebar />
+        <Sidebar firms={firms} />
 
         <main className="flex min-h-0 min-w-0 w-full flex-1 overflow-x-clip overflow-y-auto p-4 sm:p-6">
           {children}

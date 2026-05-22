@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 // This config is used by middleware (Edge Runtime) — no Prisma imports here.
-// The authorize logic is in lib/auth.ts which runs in Node.js runtime.
+// The authorize logic and jwt/session callbacks are in lib/auth.ts (Node.js runtime).
 export const authConfig = {
   pages: {
     signIn: "/login",
@@ -19,20 +19,4 @@ export const authConfig = {
       authorize: () => null,
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.locale = user.locale ?? "en";
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.locale = (token.locale as string | undefined) ?? "en";
-      }
-      return session;
-    },
-  },
 } satisfies NextAuthConfig;

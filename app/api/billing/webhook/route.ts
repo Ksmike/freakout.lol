@@ -105,6 +105,29 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
   const customer = await BillingModel.findCustomerByStripeId(customerId);
   if (!customer) return;
 
+  // Reset the usage meter for the new billing period
+  // The period_start from the invoice is the authoritative billing period boundary
+  const periodStart = invoice.period_start
+    ? new Date(invoice.period_start * 1000)
+    : new Date();
+
+  await db.usageMeter.upsert({
+    where: { firmId: customer.firmId },
+    create: {
+      firmId: customer.firmId,
+      periodStart,
+      uploadsCount: 0,
+      runsCount: 0,
+      exportsCount: 0,
+    },
+    update: {
+      periodStart,
+      uploadsCount: 0,
+      runsCount: 0,
+      exportsCount: 0,
+    },
+  });
+
   const ownerMembership = await db.firmMembership.findFirst({
     where: { firmId: customer.firmId, role: "OWNER", status: "ACTIVE" },
     select: { userId: true },

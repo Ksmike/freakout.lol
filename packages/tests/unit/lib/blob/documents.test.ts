@@ -38,21 +38,21 @@ describe("blob document path helpers", () => {
     expect(sanitizeDocumentPathSegments(["reports", "final.exe"])).toBeNull();
   });
 
-  it("builds project-specific blob prefix and path", () => {
-    expect(buildProjectBlobPrefix("user-1", "project-1")).toBe(
-      "user-1/project-1/"
+  it("builds project-specific blob prefix and path using firmId", () => {
+    expect(buildProjectBlobPrefix("firm-1", "project-1")).toBe(
+      "firm-1/project-1/"
     );
-    expect(buildProjectBlobPath("user-1", "project-1", "notes.txt")).toBe(
-      "user-1/project-1/notes.txt"
+    expect(buildProjectBlobPath("firm-1", "project-1", "notes.txt")).toBe(
+      "firm-1/project-1/notes.txt"
     );
-    expect(buildProjectBlobPath("bad/user", "project-1", "notes.txt")).toBeNull();
+    expect(buildProjectBlobPath("bad/firm", "project-1", "notes.txt")).toBeNull();
   });
 
   it("extracts file path from project prefix", () => {
     expect(
       getFilenameFromProjectBlobPath(
-        "user-1/project-1/reports/summary.pdf",
-        "user-1/project-1/"
+        "firm-1/project-1/reports/summary.pdf",
+        "firm-1/project-1/"
       )
     ).toBe("reports/summary.pdf");
   });

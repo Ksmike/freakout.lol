@@ -51,6 +51,13 @@ export class DiligenceWorker {
     if (!job) {
       throw new DiligenceFatalError("Diligence job not found.");
     }
+
+    // Look up firmId for blob path scoping
+    const project = await db.project.findUnique({
+      where: { id: job.projectId },
+      select: { firmId: true },
+    });
+    const firmId = project?.firmId ?? job.userId; // fallback to userId for legacy blobs
     if (
       job.status === DiligenceJobStatus.COMPLETED ||
       job.status === DiligenceJobStatus.CANCELED
@@ -99,6 +106,7 @@ export class DiligenceWorker {
         jobId: job.id,
         projectId: job.projectId,
         userId: job.userId,
+        firmId,
         selectedProvider: job.selectedProvider,
         selectedModel: job.selectedModel,
         fallbackProviders: Array.isArray(job.fallbackProviders)

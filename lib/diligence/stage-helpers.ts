@@ -23,6 +23,7 @@ export type StageContext = {
   jobId: string;
   projectId: string;
   userId: string;
+  firmId: string;
   selectedProvider: ApiKeyProvider;
   selectedModel: string;
   fallbackProviders: ApiKeyProvider[];

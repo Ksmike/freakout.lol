@@ -1,15 +1,21 @@
 // ─── User & Profile ──────────────────────────────────────────────────────────
 
+enum SystemRole {
+    ADMIN
+    USER
+}
+
 model User {
-    id                      String    @id @default(cuid())
+    id                      String     @id @default(cuid())
     name                    String?
-    email                   String    @unique
+    email                   String     @unique
     emailVerified           DateTime?
     image                   String?
     password                String? // null for OAuth-only users
-    locale                  String    @default("en")
+    locale                  String     @default("en")
+    systemRole              SystemRole @default(USER)
     // { email: boolean } — opt-in preferences set at registration
-    notificationPreferences Json      @default("{}")
+    notificationPreferences Json       @default("{}")
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -33,4 +39,5 @@ model User {
     diligenceOpenQuestions           DiligenceOpenQuestion[]
     diligenceDocumentClassifications DiligenceDocumentClassification[]
     evidenceMappings                 EvidenceMapping[]
+    projectMemberships               ProjectMembership[]
 }

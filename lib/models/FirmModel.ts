@@ -52,6 +52,34 @@ export const FirmModel = {
     return membership;
   },
 
+  async listFirmsForUser(userId: string): Promise<Array<ActiveFirmSummary>> {
+    const memberships = await db.firmMembership.findMany({
+      where: { userId, status: FirmMembershipStatus.ACTIVE },
+      orderBy: { createdAt: "asc" },
+      select: {
+        role: true,
+        firm: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            plan: true,
+            billingStatus: true,
+          },
+        },
+      },
+    });
+
+    return memberships.map((m) => ({
+      firmId: m.firm.id,
+      role: m.role,
+      name: m.firm.name,
+      slug: m.firm.slug,
+      plan: m.firm.plan,
+      billingStatus: m.firm.billingStatus,
+    }));
+  },
+
   async ensureDefaultForUser(userId: string): Promise<ActiveFirmContext> {
     const existing = await this.getActiveFirmForUser(userId);
     if (existing) {
@@ -83,8 +111,44 @@ export const FirmModel = {
   },
 
   async getActiveFirmSummaryForUser(
-    userId: string
+    userId: string,
+    preferredFirmId?: string | null
   ): Promise<ActiveFirmSummary> {
+    // If a preferred firm is specified, validate the user is a member of it
+    if (preferredFirmId) {
+      const preferred = await db.firmMembership.findFirst({
+        where: {
+          userId,
+          firmId: preferredFirmId,
+          status: FirmMembershipStatus.ACTIVE,
+        },
+        select: {
+          role: true,
+          firm: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              plan: true,
+              billingStatus: true,
+            },
+          },
+        },
+      });
+
+      if (preferred) {
+        return {
+          firmId: preferred.firm.id,
+          role: preferred.role,
+          name: preferred.firm.name,
+          slug: preferred.firm.slug,
+          plan: preferred.firm.plan,
+          billingStatus: preferred.firm.billingStatus,
+        };
+      }
+      // Preferred firm not found or user lost access — fall through to default
+    }
+
     const firm = await this.ensureDefaultForUser(userId);
     const membership = await db.firmMembership.findFirst({
       where: {

@@ -9,12 +9,17 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+// Capture the config passed to NextAuth so we can test callbacks
+let capturedConfig: Record<string, unknown> = {};
 vi.mock("next-auth", () => ({
-  default: vi.fn().mockReturnValue({
-    handlers: { GET: vi.fn(), POST: vi.fn() },
-    auth: vi.fn(),
-    signIn: vi.fn(),
-    signOut: vi.fn(),
+  default: vi.fn().mockImplementation((config) => {
+    capturedConfig = config;
+    return {
+      handlers: { GET: vi.fn(), POST: vi.fn() },
+      auth: vi.fn(),
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+    };
   }),
 }));
 
@@ -35,6 +40,9 @@ vi.mock("bcryptjs", () => ({
   },
 }));
 
+// Import auth to trigger NextAuth() call and populate capturedConfig
+await import("@/lib/auth");
+
 describe("auth config", () => {
   it("exports handlers, auth, signIn, signOut", async () => {
     const authModule = await import("@/lib/auth");
@@ -51,37 +59,88 @@ describe("auth.config", () => {
     expect(authConfig.pages?.signIn).toBe("/login");
   });
 
-  it("has jwt callback that adds user id to token", async () => {
+  it("authConfig does not define callbacks (they live in lib/auth.ts)", async () => {
     const { authConfig } = await import("@/lib/auth.config");
-    const jwtCallback = authConfig.callbacks?.jwt;
+    // Callbacks moved to lib/auth.ts so they can access the DB (Node.js runtime only)
+    expect(authConfig.callbacks).toBeUndefined();
+  });
+});
+
+describe("lib/auth.ts jwt callback", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getJwtCallback = () => (capturedConfig as any).callbacks?.jwt;
+
+  it("writes systemRole from user into token on sign-in", async () => {
+    const jwtCallback = getJwtCallback();
     expect(jwtCallback).toBeDefined();
 
     const token = { sub: "123" };
-    const user = { id: "user-1" };
+    const user = { id: "user-1", locale: "en", systemRole: "ADMIN" };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await jwtCallback!({ token, user } as any);
+    const result = await jwtCallback({ token, user } as any);
     expect(result.id).toBe("user-1");
+    expect(result.systemRole).toBe("ADMIN");
   });
 
-  it("jwt callback returns token unchanged when no user", async () => {
-    const { authConfig } = await import("@/lib/auth.config");
-    const jwtCallback = authConfig.callbacks?.jwt;
-
-    const token = { sub: "123", id: "existing" };
+  it("writes USER systemRole when user.systemRole is undefined", async () => {
+    const jwtCallback = getJwtCallback();
+    const token = { sub: "123" };
+    const user = { id: "user-1", locale: "en" };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await jwtCallback!({ token, user: undefined } as any);
-    expect(result.id).toBe("existing");
+    const result = await jwtCallback({ token, user } as any);
+    expect(result.systemRole).toBe("USER");
   });
 
-  it("has session callback that adds id to session.user", async () => {
-    const { authConfig } = await import("@/lib/auth.config");
-    const sessionCallback = authConfig.callbacks?.session;
+  it("writes USER systemRole for a regular user", async () => {
+    const jwtCallback = getJwtCallback();
+    const token = { sub: "123" };
+    const user = { id: "user-1", locale: "en", systemRole: "USER" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await jwtCallback({ token, user } as any);
+    expect(result.systemRole).toBe("USER");
+  });
+
+  it("returns token unchanged when no user (token refresh)", async () => {
+    const jwtCallback = getJwtCallback();
+    const token = { sub: "123", id: "existing", systemRole: "ADMIN" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await jwtCallback({ token, user: undefined } as any);
+    expect(result.id).toBe("existing");
+    expect(result.systemRole).toBe("ADMIN");
+  });
+});
+
+describe("lib/auth.ts session callback", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getSessionCallback = () => (capturedConfig as any).callbacks?.session;
+
+  it("copies systemRole from token into session.user", async () => {
+    const sessionCallback = getSessionCallback();
     expect(sessionCallback).toBeDefined();
 
-    const session = { user: { id: "" } };
-    const token = { id: "user-1" };
+    const session = { user: { id: "", locale: "", systemRole: "" } };
+    const token = { id: "user-1", locale: "en", systemRole: "ADMIN" };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await sessionCallback!({ session, token } as any);
+    const result = await sessionCallback({ session, token } as any);
     expect(result.user.id).toBe("user-1");
+    expect(result.user.systemRole).toBe("ADMIN");
+  });
+
+  it("defaults systemRole to USER when token.systemRole is missing", async () => {
+    const sessionCallback = getSessionCallback();
+    const session = { user: { id: "", locale: "", systemRole: "" } };
+    const token = { id: "user-1", locale: "en" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await sessionCallback({ session, token } as any);
+    expect(result.user.systemRole).toBe("USER");
+  });
+
+  it("copies USER systemRole from token into session.user", async () => {
+    const sessionCallback = getSessionCallback();
+    const session = { user: { id: "", locale: "", systemRole: "" } };
+    const token = { id: "user-1", locale: "en", systemRole: "USER" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await sessionCallback({ session, token } as any);
+    expect(result.user.systemRole).toBe("USER");
   });
 });

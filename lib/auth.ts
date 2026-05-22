@@ -45,6 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           image: user.image,
           locale: user.locale,
+          systemRole: user.systemRole,
         };
       },
     }),
@@ -52,4 +53,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
     // GitHub({ clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.locale = user.locale ?? "en";
+        token.systemRole = user.systemRole ?? "USER";
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.locale = (token.locale as string | undefined) ?? "en";
+        session.user.systemRole = (token.systemRole as string | undefined) ?? "USER";
+      }
+      return session;
+    },
+  },
 });

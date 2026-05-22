@@ -84,6 +84,8 @@ vi.mock("@/lib/actions/firm", () => ({
       status: "ACTIVE",
     },
   ]),
+  listPendingInvitations: vi.fn().mockResolvedValue([]),
+  revokeInvitation: vi.fn(),
   updateFirmMemberRole: vi.fn(),
 }));
 vi.mock("@/lib/actions/project", () => ({
@@ -294,6 +296,8 @@ vi.mock("@/labels", () => ({
           diligenceCostEstimateLabel: "Estimated cost",
           diligenceLastErrorLabel: "Last error",
           diligenceNoJobMessage: "No diligence job has started yet.",
+          diligenceFailedStageLabel: "Failed stage",
+          diligenceAttemptsLabel: "Attempts",
           diligenceJobCreatedToast: "Due diligence job initialized.",
           diligenceRunningToast: "Diligence workflow running.",
           diligenceCompletedToast: "Due diligence job completed.",
@@ -599,7 +603,8 @@ describe("RegisterPage", () => {
     const { default: RegisterPage } = await import(
       "@/app/(auth)/register/page"
     );
-    render(<RegisterPage />);
+    const element = await RegisterPage({ searchParams: Promise.resolve({}) });
+    render(element);
     expect(
       screen.getByRole("heading", { name: "Create an account" })
     ).toBeInTheDocument();

@@ -76,6 +76,8 @@ export const appLabels: AppLabels["app"] = {
     diligenceCostEstimateLabel: "Estimated cost",
     diligenceLastErrorLabel: "Last error",
     diligenceNoJobMessage: "No diligence job has started yet.",
+    diligenceFailedStageLabel: "Failed stage",
+    diligenceAttemptsLabel: "Attempts",
     diligenceJobCreatedToast: "Due diligence job initialized.",
     diligenceRunningToast: "Diligence workflow running.",
     diligenceCompletedToast: "Due diligence job completed.",

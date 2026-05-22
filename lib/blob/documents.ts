@@ -84,7 +84,32 @@ export function sanitizeDocumentPathSegments(segments: string[]): string | null 
   return sanitizedSegments.join("/");
 }
 
+/**
+ * Builds the firm-scoped blob prefix for a project.
+ * New path format: {firmId}/{projectId}/
+ *
+ * This replaced the old userId-based format ({userId}/{projectId}/).
+ * Use buildLegacyProjectBlobPrefix for reading old blobs during migration.
+ */
 export function buildProjectBlobPrefix(
+  firmId: string,
+  projectId: string
+): string | null {
+  const normalizedFirmId = normalizeIdentifier(firmId);
+  const normalizedProjectId = sanitizeProjectId(projectId);
+
+  if (!normalizedFirmId || !normalizedProjectId) {
+    return null;
+  }
+
+  return `${normalizedFirmId}/${normalizedProjectId}/`;
+}
+
+/**
+ * Legacy prefix using userId — used only during blob migration.
+ * @deprecated Use buildProjectBlobPrefix with firmId instead.
+ */
+export function buildLegacyProjectBlobPrefix(
   userId: string,
   projectId: string
 ): string | null {
@@ -99,11 +124,11 @@ export function buildProjectBlobPrefix(
 }
 
 export function buildProjectBlobPath(
-  userId: string,
+  firmId: string,
   projectId: string,
   documentPath: string
 ): string | null {
-  const prefix = buildProjectBlobPrefix(userId, projectId);
+  const prefix = buildProjectBlobPrefix(firmId, projectId);
   if (!prefix) {
     return null;
   }

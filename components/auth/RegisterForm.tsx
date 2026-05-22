@@ -31,7 +31,7 @@ const CRITERIA_LABELS: { key: keyof PasswordCriteria; label: string }[] = [
   { key: "hasSymbol", label: "One symbol" },
 ];
 
-export function RegisterForm() {
+export function RegisterForm({ inviteToken }: { inviteToken?: string | null }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +50,9 @@ export function RegisterForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      {inviteToken && (
+        <input type="hidden" name="inviteToken" value={inviteToken} />
+      )}
       {state?.error && (
         <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
           {state.error}

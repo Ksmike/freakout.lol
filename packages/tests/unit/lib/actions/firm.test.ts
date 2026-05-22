@@ -38,6 +38,33 @@ vi.mock("next/cache", () => ({
   revalidatePath: mockRevalidatePath,
 }));
 
+vi.mock("@/lib/active-firm", () => ({
+  getActiveFirmIdFromCookie: vi.fn().mockResolvedValue(null),
+  setActiveFirmCookie: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/models/InvitationModel", () => ({
+  InvitationModel: {
+    create: vi.fn(),
+    listPendingForFirm: vi.fn().mockResolvedValue([]),
+    revoke: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/email", () => ({
+  resend: { emails: { send: vi.fn().mockResolvedValue({ id: "email-1" }) } },
+  FROM_ADDRESS: "test@example.com",
+  getAppUrl: vi.fn().mockReturnValue("https://localhost:3000"),
+}));
+
+vi.mock("@/lib/emails/render-invite", () => ({
+  renderInviteEmail: vi.fn().mockResolvedValue("<html>invite</html>"),
+}));
+
+vi.mock("@/lib/emails/invite", () => ({
+  inviteEmailText: vi.fn().mockReturnValue("invite text"),
+}));
+
 const {
   addFirmMemberByEmail,
   getActiveFirmSummary,
@@ -81,7 +108,7 @@ describe("getActiveFirmSummary", () => {
     });
     expect(result?.permissions).toContain("billing.manage");
     expect(result?.permissions).toContain("projects.create");
-    expect(mockGetActiveFirmSummaryForUser).toHaveBeenCalledWith("user-1");
+    expect(mockGetActiveFirmSummaryForUser).toHaveBeenCalledWith("user-1", null);
   });
 });
 

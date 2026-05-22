@@ -4,7 +4,14 @@ export const metadata = {
   title: "Register | KG Qualify",
 };
 
-export default function RegisterPage() {
+type RegisterPageProps = {
+  searchParams?: Promise<{ invite?: string }>;
+};
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const params = await searchParams;
+  const inviteToken = params?.invite ?? null;
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
@@ -13,10 +20,12 @@ export default function RegisterPage() {
             Create an account
           </h1>
           <p className="mt-1 text-sm text-foreground/60">
-            Get started with KG Qualify
+            {inviteToken
+              ? "Complete your registration to accept the invitation."
+              : "Get started with KG Qualify"}
           </p>
         </div>
-        <RegisterForm />
+        <RegisterForm inviteToken={inviteToken} />
       </div>
     </div>
   );

@@ -304,7 +304,7 @@ export async function deleteProject(
     }
   }
 
-  const prefix = buildProjectBlobPrefix(session.user.id, projectId);
+  const prefix = buildProjectBlobPrefix(project.firmId, projectId);
   if (prefix) {
     try {
       const { blobs } = await list({ prefix });

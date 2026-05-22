@@ -46,8 +46,15 @@ export async function GET(
     );
   }
 
+  // Look up firmId for blob path scoping
+  const project = await db.project.findFirst({
+    where: { id: sanitizedProjectId, userId },
+    select: { firmId: true },
+  });
+  const blobScopeId = project?.firmId ?? userId;
+
   const pathname = buildProjectBlobPath(
-    userId,
+    blobScopeId,
     sanitizedProjectId,
     sanitizedDocumentPath
   );
@@ -114,8 +121,15 @@ export async function DELETE(
     );
   }
 
+  // Look up firmId for blob path scoping
+  const projectForDelete = await db.project.findFirst({
+    where: { id: sanitizedProjectId, userId },
+    select: { firmId: true },
+  });
+  const deleteScopeId = projectForDelete?.firmId ?? userId;
+
   const pathname = buildProjectBlobPath(
-    userId,
+    deleteScopeId,
     sanitizedProjectId,
     sanitizedDocumentPath
   );
@@ -171,6 +185,7 @@ export async function PATCH(
     params,
   }: { params: Promise<{ projectId: string; documentPath: string[] }> }
 ) {
+  const requestId = generateRequestId();
   const session = await auth();
   const userId = session?.user?.id ?? null;
   if (!userId) {
@@ -194,8 +209,14 @@ export async function PATCH(
     );
   }
 
+  // Look up firmId for blob path scoping
+  const projectForPatch = await db.project.findFirst({
+    where: { id: sanitizedProjectId, userId },
+    select: { firmId: true },
+  });
+
   const pathname = buildProjectBlobPath(
-    userId,
+    projectForPatch?.firmId ?? userId,
     sanitizedProjectId,
     sanitizedDocumentPath
   );
@@ -220,6 +241,28 @@ export async function PATCH(
     data: {
       status: ProjectStatus.DRAFT,
     },
+  });
+
+  // Audit write (best-effort)
+  if (projectForPatch?.firmId) {
+    AuditLogModel.record({
+      firmId: projectForPatch.firmId,
+      actorUserId: userId,
+      action: AuditAction.DOCUMENT_REPROCESSED,
+      targetType: "ProjectDocument",
+      targetId: pathname,
+      projectId: sanitizedProjectId,
+      metadata: { pathname, requestId },
+    }).catch((err) => {
+      logger.warn("reprocess.audit_failed", { requestId, userId, projectId: sanitizedProjectId }, err);
+    });
+  }
+
+  logger.info("document.reprocessed", {
+    requestId,
+    userId,
+    projectId: sanitizedProjectId,
+    pathname,
   });
 
   return Response.json({ reprocessQueued: true }, { status: 200 });

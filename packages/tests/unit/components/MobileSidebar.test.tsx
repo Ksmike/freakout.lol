@@ -3,6 +3,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MobileSidebar } from "@/components/MobileSidebar";
 
+vi.mock("@/lib/active-firm", () => ({
+  getActiveFirmIdFromCookie: vi.fn().mockResolvedValue(null),
+  setActiveFirmCookie: vi.fn().mockResolvedValue(undefined),
+  clearActiveFirmCookie: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/actions/firm", () => ({
+  switchFirm: vi.fn(),
+  listUserFirms: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("@/lib/actions/auth", () => ({
   logout: vi.fn(),
 }));

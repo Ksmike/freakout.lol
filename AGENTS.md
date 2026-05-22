@@ -6,6 +6,41 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
+# ⚠️ Open-Source Repository — Security Rules
+
+**This is a public open-source repository. Never expose sensitive data in source files.**
+
+## What must NEVER appear in committed code
+
+- Database connection strings, passwords, or credentials
+- API keys of any kind (Stripe, Resend, Sentry, OpenAI, Anthropic, Google, Vercel Blob, etc.)
+- Auth secrets (`AUTH_SECRET`, JWT secrets, webhook secrets)
+- Real user IDs, email addresses, or PII from the production database
+- Internal hostnames, IP addresses, or infrastructure details
+- Hardcoded DSNs (Sentry DSN belongs in env vars only)
+
+## Where secrets live
+
+All secrets belong in `.env` (gitignored via `.env*` in `.gitignore`). Never inline them in:
+- Source files (`.ts`, `.tsx`, `.js`)
+- Migration SQL files
+- Test fixtures
+- Documentation or comments
+- Seed scripts committed to the repo
+
+## Safe patterns
+
+- Reference secrets via `process.env.MY_SECRET` — never hardcode the value
+- Use placeholder values in examples: `process.env.DATABASE_URL` not the actual URL
+- In migration scripts that need a specific user ID (e.g., bootstrap admin), run them locally and do not commit the script with the real ID — or use a comment like `-- replace with your user ID`
+- Test fixtures use fake IDs like `"user-1"`, `"firm-1"` — never real production IDs
+
+## Before pushing
+
+Run a quick check: `git diff --staged | grep -E 'sk_|pk_|npg_|re_|sntrys_|whsec_|AUTH_SECRET'` — if anything matches, do not push.
+
+---
+
 # HeroUI & Tailwind CSS Guidelines
 
 ## Core Principles
