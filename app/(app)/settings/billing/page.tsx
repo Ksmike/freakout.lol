@@ -2,12 +2,17 @@ import {
   LuCircleCheck,
   LuCreditCard,
   LuTriangleAlert,
+  LuUsers,
+  LuPlus,
+  LuMinus,
 } from "react-icons/lu";
 import { CancelSubscriptionForm } from "./CancelSubscriptionForm";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
 import {
   createCheckoutSession,
   createPortalSession,
+  createSeatCheckoutSession,
+  removeSeat,
   getBillingSummary,
   syncCheckoutSession,
   type BillingSyncResult,
@@ -89,72 +94,229 @@ export default async function BillingSettingsPage({
         </div>
       )}
 
+      {/* Subscription details table */}
       <div
-        className={`space-y-4 rounded-lg border p-4 ${
+        className={`rounded-lg border p-4 ${
           hasActiveSubscription
             ? "border-success/30 bg-success/5"
             : "border-divider bg-content1"
         }`}
       >
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs font-medium uppercase text-foreground/45">
-              {t.billingPlanLabel}
-            </dt>
-            <dd className="mt-1 font-medium text-foreground capitalize">
-              {formatPlanLabel(billing?.plan ?? "starter")}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium uppercase text-foreground/45">
-              {t.billingStatusLabel}
-            </dt>
-            <dd className="mt-1 flex items-center gap-2">
-              <span className="font-medium text-foreground capitalize">
-                {formatBillingStatus(displayStatus)}
-              </span>
-              {billing?.subscription?.cancelAtPeriodEnd && (
-                <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                  {t.billingCancelsLabel}
-                </span>
-              )}
-            </dd>
-          </div>
-          {billing?.subscription?.currentPeriodEnd && (
-            <div>
-              <dt className="text-xs font-medium uppercase text-foreground/45">
-                {t.billingPeriodEndLabel}
-              </dt>
-              <dd className="mt-1 font-medium text-foreground">
-                {new Date(billing.subscription.currentPeriodEnd).toLocaleDateString("en", {
-                  dateStyle: "medium",
-                })}
-                {billing.subscription.cancelAtPeriodEnd && (
-                  <span className="ml-2 text-xs text-warning">
-                    ({t.billingCancelsLabel})
-                  </span>
-                )}
-              </dd>
-            </div>
-          )}
-        </dl>
+        {hasActiveSubscription && billing?.subscription ? (
+          <div className="space-y-5">
+            {/* Status banner */}
+            <p
+              className={`rounded-md px-3 py-2 text-sm ${
+                billing.subscription.cancelAtPeriodEnd
+                  ? "bg-warning/10 text-warning"
+                  : "bg-success/10 text-success"
+              }`}
+            >
+              {billing.subscription.cancelAtPeriodEnd
+                ? t.billingCancelScheduled
+                : t.billingActiveSubscription}
+            </p>
 
-        {hasActiveSubscription && (
-          <p
-            className={`rounded-md px-3 py-2 text-sm ${
-              billing?.subscription?.cancelAtPeriodEnd
-                ? "bg-warning/10 text-warning"
-                : "bg-success/10 text-success"
-            }`}
-          >
-            {billing?.subscription?.cancelAtPeriodEnd
-              ? t.billingCancelScheduled
-              : t.billingActiveSubscription}
-          </p>
+            {/* Subscription table */}
+            <div className="overflow-hidden rounded-md border border-divider">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-divider bg-content2/50">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-foreground/50">
+                      Item
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase text-foreground/50">
+                      Details
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium uppercase text-foreground/50">
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-divider">
+                  <tr>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {t.billingPlanLabel}
+                    </td>
+                    <td className="px-4 py-3 capitalize text-foreground/70">
+                      {formatPlanLabel(billing.plan)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-foreground/70">
+                      —
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {t.billingStatusLabel}
+                    </td>
+                    <td className="px-4 py-3 text-foreground/70">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`size-2 rounded-full ${
+                          hasActiveSubscription ? "bg-success" : "bg-warning"
+                        }`} />
+                        <span className="capitalize">{formatBillingStatus(displayStatus)}</span>
+                      </span>
+                      {billing.subscription.cancelAtPeriodEnd && (
+                        <span className="ml-2 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                          {t.billingCancelsLabel}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-foreground/70">
+                      —
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      <span className="flex items-center gap-2">
+                        <LuUsers className="size-4 text-foreground/50" aria-hidden="true" />
+                        Seats
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-foreground/70">
+                      <span className="font-medium text-foreground">
+                        {billing.subscription.seats}
+                      </span>
+                      {" seat"}{billing.subscription.seats !== 1 ? "s" : ""}
+                      <span className="ml-2 text-xs text-foreground/50">
+                        ({billing.activeMembers ?? 0} member{(billing.activeMembers ?? 0) !== 1 ? "s" : ""} active)
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-foreground">
+                      {formatCurrency(
+                        billing.subscription.pricePerSeat * billing.subscription.seats,
+                        billing.subscription.currency
+                      )}
+                      <span className="text-xs font-normal text-foreground/50">
+                        /{billing.subscription.interval}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      Per seat
+                    </td>
+                    <td className="px-4 py-3 text-foreground/70">
+                      Unit price
+                    </td>
+                    <td className="px-4 py-3 text-right text-foreground/70">
+                      {formatCurrency(
+                        billing.subscription.pricePerSeat,
+                        billing.subscription.currency
+                      )}
+                      /{billing.subscription.interval}
+                    </td>
+                  </tr>
+                  {billing.subscription.currentPeriodEnd && (
+                    <tr>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {t.billingPeriodEndLabel}
+                      </td>
+                      <td className="px-4 py-3 text-foreground/70">
+                        {new Date(billing.subscription.currentPeriodEnd).toLocaleDateString("en", {
+                          dateStyle: "medium",
+                        })}
+                        {billing.subscription.cancelAtPeriodEnd && (
+                          <span className="ml-2 text-xs text-warning">
+                            ({t.billingCancelsLabel})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-foreground/70">
+                        —
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-divider bg-content2/30">
+                    <td className="px-4 py-3 font-semibold text-foreground">
+                      Total
+                    </td>
+                    <td className="px-4 py-3 text-foreground/70" />
+                    <td className="px-4 py-3 text-right font-semibold text-foreground">
+                      {formatCurrency(
+                        billing.subscription.pricePerSeat * billing.subscription.seats,
+                        billing.subscription.currency
+                      )}
+                      <span className="text-xs font-normal text-foreground/50">
+                        /{billing.subscription.interval}
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Seat management */}
+            <div className="flex items-center gap-3 rounded-md border border-divider bg-background px-4 py-3">
+              <LuUsers className="size-5 text-foreground/50" aria-hidden="true" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Manage seats</p>
+                <p className="text-xs text-foreground/50">
+                  Add or remove seats. Changes are prorated on your next invoice.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <form action={async () => {
+                  "use server";
+                  await removeSeat();
+                }}>
+                  <button
+                    type="submit"
+                    className="flex size-8 items-center justify-center rounded-md border border-divider text-foreground/70 transition-colors hover:bg-content2 disabled:opacity-50"
+                    aria-label="Remove seat"
+                  >
+                    <LuMinus className="size-4" />
+                  </button>
+                </form>
+                <span className="min-w-[2rem] text-center text-sm font-semibold text-foreground">
+                  {billing.subscription.seats}
+                </span>
+                <form action={createSeatCheckoutSession}>
+                  <button
+                    type="submit"
+                    className="flex size-8 items-center justify-center rounded-md border border-divider text-foreground/70 transition-colors hover:bg-content2"
+                    aria-label="Add seat"
+                  >
+                    <LuPlus className="size-4" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* No active subscription */
+          <div className="space-y-4">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-medium uppercase text-foreground/45">
+                  {t.billingPlanLabel}
+                </dt>
+                <dd className="mt-1 font-medium text-foreground capitalize">
+                  {formatPlanLabel(billing?.plan ?? "starter")}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase text-foreground/45">
+                  {t.billingStatusLabel}
+                </dt>
+                <dd className="mt-1 font-medium text-foreground capitalize">
+                  {formatBillingStatus(displayStatus)}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="space-y-1 text-sm text-foreground/60">
+              <p>{t.billingNoSubscription}</p>
+              {billing?.hasStripeCustomer && <p>{t.billingManageToCancel}</p>}
+            </div>
+          </div>
         )}
 
+        {/* Usage meters */}
         {billing?.usage && billing.entitlement && (
-          <div>
+          <div className="mt-5">
             <p className="mb-2 text-xs font-medium uppercase text-foreground/45">
               {t.billingUsageHeading}
             </p>
@@ -204,14 +366,8 @@ export default async function BillingSettingsPage({
           </div>
         )}
 
-        {!billing?.subscription && (
-          <div className="space-y-1 text-sm text-foreground/60">
-            <p>{t.billingNoSubscription}</p>
-            {billing?.hasStripeCustomer && <p>{t.billingManageToCancel}</p>}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2 pt-1">
+        {/* Action buttons */}
+        <div className="mt-5 flex flex-wrap gap-2">
           {billing?.hasStripeCustomer ? (
             <form
               action={async () => {
@@ -227,7 +383,7 @@ export default async function BillingSettingsPage({
               </button>
             </form>
           ) : (
-            <form action={createCheckoutSession.bind(null, process.env.NEXT_PUBLIC_STRIPE_PRICE_ID ?? "")}>
+            <form action={createSeatCheckoutSession}>
               <button
                 type="submit"
                 className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
@@ -259,6 +415,14 @@ function formatPlanLabel(plan: string): string {
 
 function formatBillingStatus(status: string): string {
   return status.replace(/_/g, " ").toLowerCase();
+}
+
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
 function isActiveSubscriptionStatus(status: string | undefined | null): boolean {

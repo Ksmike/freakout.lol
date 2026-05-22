@@ -433,6 +433,7 @@ export async function removeSeat(): Promise<{ error?: string }> {
 
 /**
  * Returns the current billing summary for the active firm.
+ * Pulls live subscription data from Stripe to ensure accuracy.
  */
 export async function getBillingSummary(): Promise<{
   plan: string;
@@ -442,6 +443,10 @@ export async function getBillingSummary(): Promise<{
     status: string;
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
+    seats: number;
+    pricePerSeat: number;
+    currency: string;
+    interval: string;
   } | null;
   entitlement: {
     maxSeats: number;
@@ -455,29 +460,112 @@ export async function getBillingSummary(): Promise<{
     runsCount: number;
     exportsCount: number;
   } | null;
+  activeMembers: number;
 } | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
   const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
 
-  const [customer, entitlement, meter] = await Promise.all([
+  const [customer, entitlement, meter, activeMemberCount] = await Promise.all([
     BillingModel.findCustomerByFirmId(firm.firmId),
     BillingModel.getEntitlement(firm.firmId),
     BillingModel.getOrCreateUsageMeter(firm.firmId),
+    db.firmMembership.count({ where: { firmId: firm.firmId, status: "ACTIVE" } }),
   ]);
+
+  // If we have a Stripe customer, pull live subscription data
+  let liveSubscription: {
+    status: string;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    seats: number;
+    pricePerSeat: number;
+    currency: string;
+    interval: string;
+  } | null = null;
+
+  if (customer?.stripeCustomerId) {
+    try {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customer.stripeCustomerId,
+        status: "all",
+        limit: 5,
+        expand: ["data.items.data.price"],
+      });
+
+      // Find the first active/trialing subscription
+      const activeSub = subscriptions.data.find(
+        (s) => s.status === "active" || s.status === "trialing"
+      );
+
+      if (activeSub) {
+        const item = activeSub.items.data[0];
+        const price = item?.price;
+        liveSubscription = {
+          status: activeSub.status.toUpperCase(),
+          currentPeriodEnd: new Date(activeSub.current_period_end * 1000).toISOString(),
+          cancelAtPeriodEnd: activeSub.cancel_at_period_end,
+          seats: item?.quantity ?? 1,
+          pricePerSeat: (price?.unit_amount ?? 0) / 100,
+          currency: price?.currency ?? "usd",
+          interval: price?.recurring?.interval ?? "month",
+        };
+
+        // Sync local state if out of date
+        const localStatus = customer.subscription?.status;
+        if (localStatus !== activeSub.status.toUpperCase()) {
+          await BillingModel.upsertSubscription({
+            billingCustomerId: customer.id,
+            stripeSubscriptionId: activeSub.id,
+            stripePriceId: price?.id ?? "",
+            status: toSubscriptionStatus(activeSub.status),
+            interval: toBillingInterval(price?.recurring?.interval ?? "month"),
+            currentPeriodStart: new Date(activeSub.current_period_start * 1000),
+            currentPeriodEnd: new Date(activeSub.current_period_end * 1000),
+            cancelAtPeriodEnd: activeSub.cancel_at_period_end,
+            canceledAt: activeSub.canceled_at
+              ? new Date(activeSub.canceled_at * 1000)
+              : null,
+            trialEnd: activeSub.trial_end
+              ? new Date(activeSub.trial_end * 1000)
+              : null,
+          });
+
+          // Also sync the firm plan
+          const planKey = await resolvePlanFromStripePrice(stripe, price);
+          await db.firm.update({
+            where: { id: firm.firmId },
+            data: { plan: planKey, billingStatus: activeSub.status },
+          });
+          await BillingModel.upsertEntitlement(firm.firmId, planKey);
+        }
+
+        // Sync seat count
+        await BillingModel.updateSeatCount(firm.firmId, item?.quantity ?? 1);
+      }
+    } catch (error) {
+      console.error("[getBillingSummary] Failed to fetch live Stripe data:", error);
+      // Fall back to local data
+      if (customer?.subscription) {
+        liveSubscription = {
+          status: customer.subscription.status,
+          currentPeriodEnd: customer.subscription.currentPeriodEnd.toISOString(),
+          cancelAtPeriodEnd: customer.subscription.cancelAtPeriodEnd,
+          seats: entitlement?.maxSeats ?? 1,
+          pricePerSeat: 10,
+          currency: "usd",
+          interval: "month",
+        };
+      }
+    }
+  }
 
   return {
     plan: firm.plan,
     billingStatus: firm.billingStatus,
     hasStripeCustomer: !!customer,
-    subscription: customer?.subscription
-      ? {
-          status: customer.subscription.status,
-          currentPeriodEnd: customer.subscription.currentPeriodEnd.toISOString(),
-          cancelAtPeriodEnd: customer.subscription.cancelAtPeriodEnd,
-        }
-      : null,
+    subscription: liveSubscription,
     entitlement: entitlement
       ? {
           maxSeats: entitlement.maxSeats,
@@ -494,6 +582,7 @@ export async function getBillingSummary(): Promise<{
           exportsCount: meter.exportsCount,
         }
       : null,
+    activeMembers: activeMemberCount,
   };
 }
 
