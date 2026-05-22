@@ -32,6 +32,7 @@ export async function getProjectForSidebar(
   hasInsights: boolean;
   hasReports: boolean;
   hasEnquiries: boolean;
+  hasDraft: boolean;
 } | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
@@ -41,7 +42,7 @@ export async function getProjectForSidebar(
   });
   if (!project) return null;
 
-  const [insightRecord, reportRecord, completedReportRecord] = await Promise.all([
+  const [insightRecord, reportRecord, completedReportRecord, draftRecord] = await Promise.all([
     db.diligenceJob.findFirst({
       where: {
         projectId: project.id,
@@ -77,6 +78,17 @@ export async function getProjectForSidebar(
       },
       select: { id: true },
     }),
+    // Draft is available when the project has an assistance goal + a completed job
+    db.assistanceGoal.findUnique({
+      where: { projectId: project.id },
+      select: { projectId: true },
+    }).then(async (goal) => {
+      if (!goal) return null;
+      return db.diligenceJob.findFirst({
+        where: { projectId: project.id, userId: session.user.id, status: DiligenceJobStatus.COMPLETED },
+        select: { id: true },
+      });
+    }),
   ]);
 
   return {
@@ -85,5 +97,6 @@ export async function getProjectForSidebar(
     hasInsights: Boolean(insightRecord),
     hasReports: Boolean(reportRecord),
     hasEnquiries: Boolean(completedReportRecord),
+    hasDraft: Boolean(draftRecord),
   };
 }

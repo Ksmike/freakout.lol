@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { ProjectStatus as PrismaProjectStatus } from "@/lib/generated/prisma/client";
+import { FirmModel } from "@/lib/models/FirmModel";
 
 /**
  * App-level project status (used in UI, labels, routing).
@@ -38,16 +39,20 @@ function toPrismaStatus(appStatus: ProjectStatus): PrismaProjectStatus {
 
 export const ProjectModel = {
   async countByUserId(userId: string): Promise<number> {
+    const firm = await FirmModel.ensureDefaultForUser(userId);
+
     return db.project.count({
-      where: { userId },
+      where: { firmId: firm.firmId },
     });
   },
 
   async listByUserId(
     userId: string
   ): Promise<Array<{ id: string; name: string; status: ProjectStatus }>> {
+    const firm = await FirmModel.ensureDefaultForUser(userId);
+
     const projects = await db.project.findMany({
-      where: { userId },
+      where: { firmId: firm.firmId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -70,17 +75,21 @@ export const ProjectModel = {
     name: string;
     status: ProjectStatus;
     createdAt: Date;
+    firmId: string;
   } | null> {
+    const firm = await FirmModel.ensureDefaultForUser(input.userId);
+
     const project = await db.project.findFirst({
       where: {
         id: input.projectId,
-        userId: input.userId,
+        firmId: firm.firmId,
       },
       select: {
         id: true,
         name: true,
         status: true,
         createdAt: true,
+        firmId: true,
       },
     });
 
@@ -95,11 +104,14 @@ export const ProjectModel = {
   },
 
   async createForUser(input: { name: string; userId: string }) {
+    const firm = await FirmModel.ensureDefaultForUser(input.userId);
+
     return db.project.create({
       data: {
         name: input.name,
         status: PrismaProjectStatus.DRAFT,
         userId: input.userId,
+        firmId: firm.firmId,
       },
     });
   },
@@ -109,10 +121,12 @@ export const ProjectModel = {
     userId: string;
     status: ProjectStatus;
   }): Promise<boolean> {
+    const firm = await FirmModel.ensureDefaultForUser(input.userId);
+
     const result = await db.project.updateMany({
       where: {
         id: input.projectId,
-        userId: input.userId,
+        firmId: firm.firmId,
       },
       data: {
         status: toPrismaStatus(input.status),
@@ -126,10 +140,12 @@ export const ProjectModel = {
     projectId: string;
     userId: string;
   }): Promise<boolean> {
+    const firm = await FirmModel.ensureDefaultForUser(input.userId);
+
     const result = await db.project.deleteMany({
       where: {
         id: input.projectId,
-        userId: input.userId,
+        firmId: firm.firmId,
       },
     });
 

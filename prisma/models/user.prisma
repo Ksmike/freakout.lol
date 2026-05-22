@@ -1,31 +1,36 @@
 // ─── User & Profile ──────────────────────────────────────────────────────────
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String    @unique
-    emailVerified DateTime?
-    image         String?
-    password      String? // null for OAuth-only users
-    locale        String    @default("en")
+    id                      String    @id @default(cuid())
+    name                    String?
+    email                   String    @unique
+    emailVerified           DateTime?
+    image                   String?
+    password                String? // null for OAuth-only users
+    locale                  String    @default("en")
+    // { email: boolean } — opt-in preferences set at registration
+    notificationPreferences Json      @default("{}")
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    accounts Account[]
-    sessions Session[]
-    projects Project[]
-    projectDocuments ProjectDocument[]
-    apiKeys  UserApiKey[]
-    diligenceJobs DiligenceJob[]
-    diligenceArtifacts DiligenceArtifact[]
-    diligenceFindings DiligenceFinding[]
-    diligenceClaims DiligenceClaim[]
-    diligenceEntities DiligenceEntity[]
-    diligenceContradictions DiligenceContradiction[]
-    diligenceChunks DiligenceChunk[]
-    diligenceQuestionAnswers DiligenceQuestionAnswer[]
-    diligenceEvidenceGaps DiligenceEvidenceGap[]
-    diligenceOpenQuestions DiligenceOpenQuestion[]
+    accounts                         Account[]
+    sessions                         Session[]
+    firmMemberships                  FirmMembership[]
+    auditLogs                        AuditLog[]
+    projects                         Project[]
+    projectDocuments                 ProjectDocument[]
+    apiKeys                          UserApiKey[]
+    diligenceJobs                    DiligenceJob[]
+    diligenceArtifacts               DiligenceArtifact[]
+    diligenceFindings                DiligenceFinding[]
+    diligenceClaims                  DiligenceClaim[]
+    diligenceEntities                DiligenceEntity[]
+    diligenceContradictions          DiligenceContradiction[]
+    diligenceChunks                  DiligenceChunk[]
+    diligenceQuestionAnswers         DiligenceQuestionAnswer[]
+    diligenceEvidenceGaps            DiligenceEvidenceGap[]
+    diligenceOpenQuestions           DiligenceOpenQuestion[]
     diligenceDocumentClassifications DiligenceDocumentClassification[]
+    evidenceMappings                 EvidenceMapping[]
 }

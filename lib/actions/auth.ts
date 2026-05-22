@@ -41,9 +41,15 @@ export async function register(formData: FormData) {
   const email = normalizeEmail((formData.get("email") as string) ?? "");
   const password = formData.get("password") as string;
   const name = ((formData.get("name") as string | null) ?? "").trim() || null;
+  const acceptedTerms = formData.get("acceptedTerms") === "on";
+  const emailOptIn = formData.get("emailOptIn") === "on";
 
   if (!email || !password) {
     return { error: "Email and password are required" };
+  }
+
+  if (!acceptedTerms) {
+    return { error: "You must accept the Terms of Service and Privacy Policy to continue." };
   }
 
   const registerRateLimit = checkRateLimit({
@@ -79,6 +85,7 @@ export async function register(formData: FormData) {
       name,
       password: hashedPassword,
       locale: "en",
+      notificationPreferences: { email: emailOptIn },
     },
   });
 

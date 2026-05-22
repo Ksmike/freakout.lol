@@ -1,0 +1,94 @@
+// ─── Billing & Entitlements ──────────────────────────────────────────────────
+
+enum SubscriptionStatus {
+    TRIALING
+    ACTIVE
+    PAST_DUE
+    CANCELED
+    UNPAID
+    PAUSED
+}
+
+enum BillingInterval {
+    MONTHLY
+    ANNUAL
+}
+
+model BillingCustomer {
+    id               String   @id @default(cuid())
+    firmId           String   @unique
+    stripeCustomerId String   @unique
+    billingEmail     String?
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    firm         Firm          @relation(fields: [firmId], references: [id], onDelete: Cascade)
+    subscription Subscription?
+
+    @@index([stripeCustomerId])
+}
+
+model Subscription {
+    id                   String             @id @default(cuid())
+    billingCustomerId    String             @unique
+    stripeSubscriptionId String             @unique
+    stripePriceId        String
+    status               SubscriptionStatus @default(TRIALING)
+    interval             BillingInterval    @default(MONTHLY)
+    currentPeriodStart   DateTime
+    currentPeriodEnd     DateTime
+    cancelAtPeriodEnd    Boolean            @default(false)
+    canceledAt           DateTime?
+    trialEnd             DateTime?
+    createdAt            DateTime           @default(now())
+    updatedAt            DateTime           @updatedAt
+
+    billingCustomer BillingCustomer @relation(fields: [billingCustomerId], references: [id], onDelete: Cascade)
+
+    @@index([stripeSubscriptionId])
+    @@index([status])
+}
+
+// Limits per plan — one row per firm, upserted when plan changes.
+model PlanEntitlement {
+    id              String   @id @default(cuid())
+    firmId          String   @unique
+    maxSeats        Int      @default(1)
+    maxProjects     Int      @default(3)
+    maxUploadsMonth Int      @default(20)
+    maxRunsMonth    Int      @default(5)
+    maxExportsMonth Int      @default(10)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    firm Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+}
+
+// Rolling monthly usage counters — reset at the start of each billing period.
+model UsageMeter {
+    id           String   @id @default(cuid())
+    firmId       String   @unique
+    periodStart  DateTime
+    uploadsCount Int      @default(0)
+    runsCount    Int      @default(0)
+    exportsCount Int      @default(0)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    firm Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+}
+
+// Immutable record of every billing-state transition received from Stripe.
+model InvoiceEvent {
+    id            String   @id @default(cuid())
+    firmId        String?
+    stripeEventId String   @unique // idempotency key
+    eventType     String
+    payload       Json
+    processedAt   DateTime @default(now())
+
+    firm Firm? @relation(fields: [firmId], references: [id], onDelete: SetNull)
+
+    @@index([firmId, processedAt])
+    @@index([stripeEventId])
+}

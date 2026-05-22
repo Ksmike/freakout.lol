@@ -1,0 +1,41 @@
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+enum AuditAction {
+    FIRM_MEMBER_ADDED
+    FIRM_MEMBER_ROLE_UPDATED
+    BILLING_SUBSCRIPTION_CREATED
+    BILLING_SUBSCRIPTION_UPDATED
+    BILLING_SUBSCRIPTION_CANCELED
+    BILLING_PAYMENT_SUCCEEDED
+    BILLING_PAYMENT_FAILED
+    PROJECT_CREATED
+    PROJECT_DELETED
+    DOCUMENT_UPLOADED
+    DOCUMENT_DELETED
+    WORKFLOW_STARTED
+    WORKFLOW_CANCELED
+    EXPORT_CREATED
+    OUTPUT_APPROVED
+}
+
+model AuditLog {
+    id          String      @id @default(cuid())
+    firmId      String
+    projectId   String?
+    actorUserId String
+    action      AuditAction
+    targetType  String
+    targetId    String
+    metadata    Json?
+    requestId   String?
+    createdAt   DateTime    @default(now())
+
+    firm    Firm     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+    project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+    actor   User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+    @@index([firmId, createdAt])
+    @@index([actorUserId, createdAt])
+    @@index([projectId, createdAt])
+    @@index([action, createdAt])
+}

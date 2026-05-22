@@ -51,6 +51,7 @@ describe("register", () => {
     const formData = createFormData({
       email: "test@example.com",
       password: "short",
+      acceptedTerms: "on",
     });
     const result = await register(formData);
     expect(result).toEqual({
@@ -63,6 +64,7 @@ describe("register", () => {
     const formData = createFormData({
       email: "test@example.com",
       password: "alllowercase123",
+      acceptedTerms: "on",
     });
     const result = await register(formData);
     expect(result).toEqual({
@@ -77,6 +79,7 @@ describe("register", () => {
     const formData = createFormData({
       email: "test@example.com",
       password: "Password123!",
+      acceptedTerms: "on",
     });
     const result = await register(formData);
     expect(result).toEqual({
@@ -90,6 +93,7 @@ describe("register", () => {
     const formData = createFormData({
       email: "test@example.com",
       password: "Password123!",
+      acceptedTerms: "on",
     });
 
     await register(formData);
@@ -114,6 +118,7 @@ describe("register", () => {
       email: "test@example.com",
       password: "Password123!",
       name: "Test User",
+      acceptedTerms: "on",
     });
 
     await register(formData);
@@ -124,6 +129,7 @@ describe("register", () => {
         name: "Test User",
         password: "hashed_password",
         locale: "en",
+        notificationPreferences: { email: false },
       },
     });
     expect((await import("bcryptjs")).default.hash).toHaveBeenCalledWith(
@@ -149,6 +155,7 @@ describe("register", () => {
     const formData = createFormData({
       email: "test@example.com",
       password: "Password123!",
+      acceptedTerms: "on",
     });
 
     await register(formData);
@@ -159,6 +166,7 @@ describe("register", () => {
         name: null,
         password: "hashed_password",
         locale: "en",
+        notificationPreferences: { email: false },
       },
     });
   });

@@ -16,6 +16,30 @@ vi.mock("@/lib/models/ProjectModel", () => ({
   ProjectModel: mockProjectModel,
 }));
 
+const mockFirmModel = {
+  ensureDefaultForUser: vi.fn().mockResolvedValue({ firmId: "firm-1", role: "OWNER" }),
+  getActiveFirmForUser: vi.fn(),
+};
+vi.mock("@/lib/models/FirmModel", () => ({
+  FirmModel: mockFirmModel,
+}));
+
+const mockBillingModel = {
+  checkProjectCreation: vi.fn().mockResolvedValue({ allowed: true }),
+  checkWorkflowRun: vi.fn().mockResolvedValue({ allowed: true }),
+  incrementRuns: vi.fn().mockResolvedValue(undefined),
+};
+vi.mock("@/lib/models/BillingModel", () => ({
+  BillingModel: mockBillingModel,
+}));
+
+const mockAuditRecord = vi.fn();
+vi.mock("@/lib/models/AuditLogModel", () => ({
+  AuditLogModel: {
+    record: mockAuditRecord,
+  },
+}));
+
 const mockListEnabledForUser = vi.fn();
 vi.mock("@/lib/models/UserApiKeyModel", () => ({
   UserApiKeyModel: {

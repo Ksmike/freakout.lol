@@ -6,6 +6,7 @@ import { runDocumentExtraction } from "@/lib/diligence/stages/document-extractio
 import { runEvidenceIndexing } from "@/lib/diligence/stages/evidence-indexing";
 import { runCorroboration } from "@/lib/diligence/stages/corroboration";
 import { runLlmStage } from "@/lib/diligence/stages/llm-stage";
+import { logger } from "@/lib/logger";
 import {
   toNonNegativeNumber,
   toInputJson,
@@ -153,6 +154,28 @@ export class DiligenceWorker {
           where: { id: job.projectId, userId: job.userId },
           data: { status: PrismaProjectStatus.REVIEWED },
         });
+
+        // Auto-map evidence to graph requirements (best-effort)
+        try {
+          const project = await db.project.findUnique({
+            where: { id: job.projectId },
+            select: { firmId: true },
+          });
+          if (project) {
+            const { autoMapEvidenceForJob } = await import(
+              "@/lib/diligence/evidence-mapper"
+            );
+            await autoMapEvidenceForJob({
+              jobId: job.id,
+              projectId: job.projectId,
+              userId: job.userId,
+              firmId: project.firmId,
+            });
+          }
+        } catch {
+          // Mapping failure must never fail the job completion path.
+        }
+
         return { status: "completed", stage: nextStage };
       }
 
@@ -181,6 +204,17 @@ export class DiligenceWorker {
           lastHeartbeatAt: new Date(),
         },
       });
+
+      const logLevel = isFatal ? "error" : "warn";
+      logger[logLevel]("diligence.stage_failed", {
+        jobId: job.id,
+        projectId: job.projectId,
+        userId: job.userId,
+        stage: nextStage,
+        fatal: isFatal,
+        error_message: message,
+      }, error);
+
       throw error;
     }
   }
@@ -198,6 +232,22 @@ export class DiligenceWorker {
       where: { id: projectId, userId },
       data: { status: PrismaProjectStatus.REVIEWED },
     });
+
+    // Auto-map evidence to graph requirements (best-effort — never blocks completion)
+    try {
+      const project = await db.project.findUnique({
+        where: { id: projectId },
+        select: { firmId: true },
+      });
+      if (project) {
+        const { autoMapEvidenceForJob } = await import(
+          "@/lib/diligence/evidence-mapper"
+        );
+        await autoMapEvidenceForJob({ jobId, projectId, userId, firmId: project.firmId });
+      }
+    } catch {
+      // Mapping failure must never fail the job completion path.
+    }
   }
 
   private async executeStage(ctx: StageContext): Promise<StageExecutionResult> {

@@ -23,9 +23,11 @@ function buildProjectSubNav(input: {
   hasInsights: boolean;
   hasReports: boolean;
   hasEnquiries: boolean;
+  hasDraft: boolean;
 }): ProjectSubNavItem[] {
   return [
     { label: "General", suffix: "" },
+    ...(input.hasDraft ? [{ label: "Draft", suffix: "/draft" }] : []),
     ...(input.hasInsights ? [{ label: "Insights", suffix: "/insights" }] : []),
     ...(input.hasReports ? [{ label: "Reports", suffix: "/report" }] : []),
     ...(input.hasEnquiries ? [{ label: "Enquiries", suffix: "/enquiries" }] : []),
@@ -43,6 +45,7 @@ export function Sidebar() {
     hasInsights: boolean;
     hasReports: boolean;
     hasEnquiries: boolean;
+    hasDraft: boolean;
   } | null>(null);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -207,6 +210,7 @@ function ProjectNav({
     hasInsights: boolean;
     hasReports: boolean;
     hasEnquiries: boolean;
+    hasDraft: boolean;
   } | null;
   pathname: string;
   highlightSettings: boolean;
@@ -217,6 +221,7 @@ function ProjectNav({
     hasInsights: activeProjectSidebarData?.hasInsights ?? false,
     hasReports: activeProjectSidebarData?.hasReports ?? false,
     hasEnquiries: activeProjectSidebarData?.hasEnquiries ?? false,
+    hasDraft: activeProjectSidebarData?.hasDraft ?? false,
   });
 
   return (

@@ -2,6 +2,11 @@ import { list, put } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { ProjectDocumentModel } from "@/lib/models/ProjectDocumentModel";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { FirmModel } from "@/lib/models/FirmModel";
+import { BillingModel } from "@/lib/models/BillingModel";
+import { AuditLogModel } from "@/lib/models/AuditLogModel";
+import { AuditAction } from "@/lib/generated/prisma/client";
+import { logger, generateRequestId } from "@/lib/logger";
 import {
   buildProjectBlobPath,
   buildProjectBlobPrefix,
@@ -39,6 +44,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const requestId = generateRequestId();
   const session = await auth();
   const userId = getUserIdFromSession(session);
   if (!userId) {
@@ -67,6 +73,20 @@ export async function POST(
         },
       }
     );
+  }
+
+  // Entitlement check: monthly upload limit
+  const firm = await FirmModel.ensureDefaultForUser(userId);
+  const uploadCheck = await BillingModel.checkUpload(firm.firmId);
+  if (!uploadCheck.allowed) {
+    logger.warn("upload.entitlement_denied", {
+      requestId,
+      userId,
+      projectId: sanitizedProjectId,
+      firmId: firm.firmId,
+      reason: uploadCheck.reason,
+    });
+    return Response.json({ error: uploadCheck.reason }, { status: 402 });
   }
 
   let file: File | null = null;
@@ -122,6 +142,30 @@ export async function POST(
       resetProcessingStatus: true,
     });
 
+    // Increment usage meter and write audit log (best-effort)
+    await Promise.all([
+      BillingModel.incrementUploads(firm.firmId),
+      AuditLogModel.record({
+        firmId: firm.firmId,
+        actorUserId: userId,
+        action: AuditAction.DOCUMENT_UPLOADED,
+        targetType: "ProjectDocument",
+        targetId: projectDocument.id,
+        projectId: sanitizedProjectId,
+        metadata: { filename: sanitizedFilename, sizeBytes: file.size, requestId },
+      }),
+    ]).catch((err) => {
+      logger.warn("upload.post_write_failed", { requestId, userId, projectId: sanitizedProjectId }, err);
+    });
+
+    logger.info("upload.completed", {
+      requestId,
+      userId,
+      projectId: sanitizedProjectId,
+      filename: sanitizedFilename,
+      sizeBytes: file.size,
+    });
+
     return Response.json(
       {
         document: {
@@ -140,7 +184,13 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch {
+  } catch (err) {
+    logger.error("upload.failed", {
+      requestId,
+      userId,
+      projectId: sanitizedProjectId,
+      filename: sanitizedFilename ?? "unknown",
+    }, err);
     return Response.json({ error: "Failed to upload document." }, { status: 500 });
   }
 }

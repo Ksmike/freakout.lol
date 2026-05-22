@@ -13,10 +13,12 @@ model Project {
     name      String
     status    ProjectStatus @default(DRAFT)
     userId    String
+    firmId    String
     createdAt DateTime      @default(now())
     updatedAt DateTime      @updatedAt
 
     user                             User                              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    firm                             Firm                              @relation(fields: [firmId], references: [id], onDelete: Cascade)
     documents                        ProjectDocument[]
     diligenceJobs                    DiligenceJob[]
     diligenceArtifacts               DiligenceArtifact[]
@@ -29,6 +31,11 @@ model Project {
     diligenceEvidenceGaps            DiligenceEvidenceGap[]
     diligenceOpenQuestions           DiligenceOpenQuestion[]
     diligenceDocumentClassifications DiligenceDocumentClassification[]
+    auditLogs                        AuditLog[]
+    assistanceGoal                   AssistanceGoal?
+    evidenceMappings                 EvidenceMapping[]
 
     @@index([userId])
+    @@index([firmId, createdAt])
+    @@index([firmId, status])
 }

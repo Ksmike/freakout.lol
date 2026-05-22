@@ -25,6 +25,35 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/models/FirmModel", () => ({
+  FirmModel: {
+    ensureDefaultForUser: vi.fn().mockResolvedValue({ firmId: "firm-1", role: "OWNER" }),
+  },
+}));
+
+vi.mock("@/lib/models/BillingModel", () => ({
+  BillingModel: {
+    checkUpload: vi.fn().mockResolvedValue({ allowed: true }),
+    incrementUploads: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock("@/lib/models/AuditLogModel", () => ({
+  AuditLogModel: {
+    record: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+  generateRequestId: vi.fn().mockReturnValue("test-req-id"),
+}));
+
 describe("projects documents API route", () => {
   beforeEach(() => {
     vi.clearAllMocks();

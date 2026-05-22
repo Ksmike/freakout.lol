@@ -48,10 +48,86 @@ vi.mock("@/components/settings/ApiKeySection", () => ({
 vi.mock("@/lib/actions/apiKeys", () => ({
   getApiKeyStatuses: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("@/lib/actions/firm", () => ({
+  addFirmMemberByEmail: vi.fn(),
+  getActiveFirmSummary: vi.fn().mockResolvedValue({
+    id: "firm-1",
+    name: "Default Firm",
+    slug: "default-firm",
+    role: "OWNER",
+    plan: "starter",
+    billingStatus: "trialing",
+    permissions: [
+      "audit.view",
+      "billing.manage",
+      "members.invite",
+      "members.manage_roles",
+      "projects.create",
+    ],
+  }),
+  listFirmAuditLogs: vi.fn().mockResolvedValue([
+    {
+      id: "audit-1",
+      action: "FIRM_MEMBER_ADDED",
+      actorLabel: "Owner User",
+      targetType: "FirmMembership",
+      targetId: "member-1",
+      createdAt: "2026-05-22T10:00:00.000Z",
+    },
+  ]),
+  listFirmMembers: vi.fn().mockResolvedValue([
+    {
+      id: "member-1",
+      name: "Owner User",
+      email: "owner@example.com",
+      role: "OWNER",
+      status: "ACTIVE",
+    },
+  ]),
+  updateFirmMemberRole: vi.fn(),
+}));
 vi.mock("@/lib/actions/project", () => ({
   createProject: vi.fn(),
   startProjectDueDiligence: vi.fn(),
   retryProjectDueDiligence: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/graph", () => ({
+  listEnabledGraphs: vi.fn().mockResolvedValue([]),
+  listAvailableGraphs: vi.fn().mockResolvedValue([]),
+  enableGraph: vi.fn(),
+  disableGraph: vi.fn(),
+  getProjectGoalWithRequirements: vi.fn().mockResolvedValue(null),
+  getProjectGaps: vi.fn().mockResolvedValue([]),
+  getProjectMappings: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/lib/stripe", () => ({
+  stripe: {},
+  getStripeWebhookSecret: vi.fn(),
+}));
+
+vi.mock("@/lib/actions/billing", () => ({
+  getBillingSummary: vi.fn().mockResolvedValue({
+    plan: "starter",
+    billingStatus: "trialing",
+    hasStripeCustomer: false,
+    subscription: null,
+    entitlement: {
+      maxSeats: 1,
+      maxProjects: 3,
+      maxUploadsMonth: 20,
+      maxRunsMonth: 5,
+      maxExportsMonth: 10,
+    },
+    usage: {
+      uploadsCount: 2,
+      runsCount: 1,
+      exportsCount: 0,
+    },
+  }),
+  createCheckoutSession: vi.fn(),
+  createPortalSession: vi.fn(),
 }));
 
 // Mock auth for marketing layout
@@ -270,6 +346,95 @@ vi.mock("@/labels", () => ({
           filesLabel: "Files",
           filesHint: "You can upload one or more files now.",
           submitCta: "Create project",
+          assistanceGoalLabel: "Workflow",
+          assistanceGoalHint: "Select a knowledge graph workflow.",
+          noGoalLabel: "No workflow",
+          noGoalHint: "Run without a structured workflow.",
+        },
+        settings: {
+          heading: "Settings",
+          description: "Manage your firm workspace and provider configuration.",
+          firmHeading: "Firm workspace",
+          firmDescription:
+            "Your active firm controls project access, billing, graph workflows, and role-based permissions.",
+          firmNameLabel: "Firm",
+          firmRoleLabel: "Role",
+          firmPlanLabel: "Plan",
+          firmBillingLabel: "Billing",
+          firmPermissionsLabel: "Enabled permissions",
+          membersHeading: "Members",
+          membersDescription:
+            "Add existing users to this firm and manage their workspace role.",
+          memberEmailLabel: "Email",
+          memberRoleLabel: "Role",
+          memberAddCta: "Add member",
+          memberUpdateCta: "Update role",
+          auditHeading: "Audit log",
+          auditDescription: "Recent privileged actions in this firm workspace.",
+          auditEmpty: "No audit events recorded yet.",
+          apiKeysHeading: "AI Provider Keys",
+          apiKeysDescription: "Bring your own API keys.",
+          encryptionNote: "Keys are stored encrypted.",
+          billingHeading: "Billing & plan",
+          billingDescription: "Manage your subscription, view usage, and upgrade your plan.",
+          billingPlanLabel: "Plan",
+          billingStatusLabel: "Status",
+          billingPeriodEndLabel: "Renews",
+          billingUsageHeading: "This month's usage",
+          billingUploadsLabel: "Uploads",
+          billingRunsLabel: "Diligence runs",
+          billingExportsLabel: "Exports",
+          billingUpgradeCta: "Upgrade plan",
+          billingManageCta: "Manage billing",
+          billingNoSubscription: "No active subscription. Upgrade to unlock higher limits.",
+        },
+        draft: {
+          heading: "Output draft",
+          description: "Source-backed draft.",
+          noDataHeading: "No draft available",
+          noDataDescription: "Complete a diligence run with a workflow selected.",
+          sectionsLabel: "Sections covered",
+          confidenceLabel: "Avg. confidence",
+          openQuestionsLabel: "Open questions",
+          openQuestionsHeading: "Open questions for founders",
+          keyClaimsHeading: "Key claims",
+          findingsHeading: "Findings",
+          gapsHeading: "Evidence gaps",
+        },
+        graphWorkflow: {
+          enabledGraphsHeading: "Knowledge graph workflows",
+          enabledGraphsDescription: "Enable structured workflows.",
+          availableGraphsHeading: "Available workflows",
+          noGraphsAvailable: "No published workflows available.",
+          enableCta: "Enable",
+          disableCta: "Disable",
+          enabledBadge: "Enabled",
+          requirementsCount: "requirements",
+          goalLabel: "Workflow",
+          goalNone: "None",
+          requirementsHeading: "Evidence requirements",
+          requirementsEmpty: "No requirements defined.",
+          gapsHeading: "Evidence gaps",
+          gapsEmpty: "All requirements are satisfied.",
+          gapPriorityHigh: "High",
+          gapPriorityMedium: "Medium",
+          gapPriorityLow: "Low",
+          mappingStatusOpen: "Open",
+          mappingStatusPartial: "Partial",
+          mappingStatusSatisfied: "Satisfied",
+          mappingStatusWaived: "Waived",
+          markSatisfiedCta: "Mark satisfied",
+          markWaivedCta: "Waive",
+          outputTemplatesHeading: "Output templates",
+          outputTemplatesEmpty: "No output templates defined.",
+          adminHeading: "Graph Studio",
+          adminDescription: "Create, version, and publish knowledge graph workflows.",
+          adminGraphsHeading: "Graph definitions",
+          adminPublishCta: "Publish",
+          adminDeprecateCta: "Deprecate",
+          adminStatusDraft: "Draft",
+          adminStatusPublished: "Published",
+          adminStatusDeprecated: "Deprecated",
         },
       },
     },
@@ -380,7 +545,7 @@ describe("ProjectCreationPage", () => {
     const { default: ProjectCreationPage } = await import(
       "@/app/(app)/projects/new/page"
     );
-    const element = await ProjectCreationPage();
+    const element = await ProjectCreationPage({ searchParams: Promise.resolve({}) });
     render(element);
 
     expect(
@@ -400,6 +565,19 @@ describe("SettingsPage", () => {
     expect(
       screen.getByRole("heading", { name: "Settings" })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Firm workspace" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Default Firm")).toBeInTheDocument();
+    expect(screen.getAllByText("OWNER").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { name: "Members" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("owner@example.com")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Audit log" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("FIRM_MEMBER_ADDED")).toBeInTheDocument();
     expect(screen.getByTestId("api-key-section")).toBeInTheDocument();
   });
 });

@@ -1,0 +1,197 @@
+// ─── Knowledge Graph Definitions ─────────────────────────────────────────────
+
+enum GraphDefinitionStatus {
+    DRAFT
+    PUBLISHED
+    DEPRECATED
+}
+
+enum OntologyNodeKind {
+    ENTITY // a named concept (company, person, product)
+    CONTROL // a compliance control or requirement
+    EVIDENCE_TYPE // acceptable source type (deck, transcript, contract)
+    QUESTION // a diligence question or form field
+    OUTPUT_SECTION // a section in the output report or form
+    RISK_CATEGORY // a risk taxonomy node
+}
+
+enum OntologyEdgeKind {
+    REQUIRES // node A requires node B to be satisfied
+    SATISFIES // node A can satisfy node B
+    CONTRADICTS // node A contradicts node B
+    MAPS_TO // node A maps to node B in another ontology
+    ESCALATES_TO // node A escalates to node B on failure
+    PART_OF // node A is a sub-element of node B
+}
+
+enum EvidenceRequirementStatus {
+    OPEN // not yet mapped
+    PARTIAL // some evidence found, gaps remain
+    SATISFIED // fully mapped with sufficient evidence
+    WAIVED // explicitly waived by an analyst
+}
+
+enum OutputTemplateKind {
+    REPORT // narrative report
+    QUESTIONNAIRE // structured Q&A form
+    REVIEW_PACK // reviewer-facing summary pack
+    EXPORT_BUNDLE // downloadable archive
+}
+
+// ─── Graph definition (platform-level, versioned) ────────────────────────────
+
+model KnowledgeGraphDefinition {
+    id          String                @id @default(cuid())
+    slug        String                @unique // e.g. "commercial-due-diligence"
+    name        String
+    description String?
+    version     Int                   @default(1)
+    status      GraphDefinitionStatus @default(DRAFT)
+    createdAt   DateTime              @default(now())
+    updatedAt   DateTime              @updatedAt
+
+    nodes                OntologyNode[]
+    edges                OntologyEdge[]
+    evidenceRequirements EvidenceRequirement[]
+    outputTemplates      OutputTemplate[]
+    firmEnablements      FirmGraphEnablement[]
+    assistanceGoals      AssistanceGoal[]
+
+    @@index([status])
+    @@index([slug, version])
+}
+
+model OntologyNode {
+    id          String           @id @default(cuid())
+    graphId     String
+    slug        String // unique within a graph
+    label       String
+    description String?
+    kind        OntologyNodeKind
+    metadata    Json?
+    createdAt   DateTime         @default(now())
+
+    graph        KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Cascade)
+    sourceEdges  OntologyEdge[]           @relation("EdgeSource")
+    targetEdges  OntologyEdge[]           @relation("EdgeTarget")
+    requirements EvidenceRequirement[]
+
+    @@unique([graphId, slug])
+    @@index([graphId, kind])
+}
+
+model OntologyEdge {
+    id        String           @id @default(cuid())
+    graphId   String
+    sourceId  String
+    targetId  String
+    kind      OntologyEdgeKind
+    weight    Float?
+    metadata  Json?
+    createdAt DateTime         @default(now())
+
+    graph  KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Cascade)
+    source OntologyNode             @relation("EdgeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+    target OntologyNode             @relation("EdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+    @@unique([graphId, sourceId, targetId, kind])
+    @@index([graphId])
+    @@index([sourceId])
+    @@index([targetId])
+}
+
+// ─── Firm graph enablement ────────────────────────────────────────────────────
+
+model FirmGraphEnablement {
+    id        String   @id @default(cuid())
+    firmId    String
+    graphId   String
+    enabledAt DateTime @default(now())
+    enabledBy String // userId
+
+    firm  Firm                     @relation(fields: [firmId], references: [id], onDelete: Cascade)
+    graph KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+    @@unique([firmId, graphId])
+    @@index([firmId])
+}
+
+// ─── Assistance goal (per project) ───────────────────────────────────────────
+
+model AssistanceGoal {
+    id        String   @id @default(cuid())
+    projectId String   @unique
+    graphId   String
+    createdAt DateTime @default(now())
+
+    project Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    graph   KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Restrict)
+
+    @@index([graphId])
+}
+
+// ─── Evidence requirements (per graph node) ──────────────────────────────────
+
+model EvidenceRequirement {
+    id          String   @id @default(cuid())
+    graphId     String
+    nodeId      String
+    title       String
+    description String?
+    priority    String   @default("medium") // high | medium | low
+    createdAt   DateTime @default(now())
+
+    graph    KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Cascade)
+    node     OntologyNode             @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+    mappings EvidenceMapping[]
+
+    @@index([graphId])
+    @@index([nodeId])
+}
+
+// ─── Evidence mappings (per project requirement) ─────────────────────────────
+
+model EvidenceMapping {
+    id            String                    @id @default(cuid())
+    projectId     String
+    requirementId String
+    userId        String
+    firmId        String
+    status        EvidenceRequirementStatus @default(OPEN)
+    // References to diligence outputs that satisfy this requirement
+    chunkRefs     Json? // DiligenceChunk ids
+    claimRefs     Json? // DiligenceClaim ids
+    findingRefs   Json? // DiligenceFinding ids
+    analystNote   String?
+    createdAt     DateTime                  @default(now())
+    updatedAt     DateTime                  @updatedAt
+
+    project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    requirement EvidenceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+    user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+    firm        Firm                @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+    @@unique([projectId, requirementId])
+    @@index([projectId, status])
+    @@index([requirementId])
+    @@index([firmId])
+}
+
+// ─── Output templates ─────────────────────────────────────────────────────────
+
+model OutputTemplate {
+    id        String             @id @default(cuid())
+    graphId   String
+    slug      String
+    name      String
+    kind      OutputTemplateKind
+    // JSON schema describing the sections/fields of this template
+    schema    Json
+    createdAt DateTime           @default(now())
+    updatedAt DateTime           @updatedAt
+
+    graph KnowledgeGraphDefinition @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+    @@unique([graphId, slug])
+    @@index([graphId, kind])
+}

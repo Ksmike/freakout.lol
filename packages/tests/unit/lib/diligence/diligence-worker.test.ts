@@ -62,6 +62,7 @@ const mockDb = {
   },
   project: {
     updateMany: vi.fn(),
+    findUnique: vi.fn().mockResolvedValue({ firmId: "firm-1" }),
   },
   projectDocument: {
     updateMany: vi.fn(),
@@ -143,6 +144,10 @@ vi.mock("@/lib/diligence/diligence-llm-service", () => ({
   DiligenceLLMService: class {
     invokeStructured = mockInvokeStructured;
   },
+}));
+
+vi.mock("@/lib/diligence/evidence-mapper", () => ({
+  autoMapEvidenceForJob: vi.fn().mockResolvedValue({ mapped: 0, skipped: 0 }),
 }));
 
 vi.mock("@/lib/diligence/stages", () => ({

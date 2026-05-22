@@ -11,11 +11,22 @@ vi.mock("@/lib/generated/prisma/client", () => ({
   },
 }));
 
+const mockEnsureDefaultForUser = vi.fn();
+vi.mock("@/lib/models/FirmModel", () => ({
+  FirmModel: {
+    ensureDefaultForUser: mockEnsureDefaultForUser,
+  },
+}));
+
 const { ProjectModel } = await import("@/lib/models/ProjectModel");
 
 describe("ProjectModel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnsureDefaultForUser.mockResolvedValue({
+      firmId: "firm-1",
+      role: "OWNER",
+    });
   });
 
   describe("countByUserId", () => {
@@ -25,8 +36,9 @@ describe("ProjectModel", () => {
       const result = await ProjectModel.countByUserId("user-1");
 
       expect(result).toBe(5);
+      expect(mockEnsureDefaultForUser).toHaveBeenCalledWith("user-1");
       expect(mockDb.project.count).toHaveBeenCalledWith({
-        where: { userId: "user-1" },
+        where: { firmId: "firm-1" },
       });
     });
 
@@ -53,7 +65,7 @@ describe("ProjectModel", () => {
         { id: "p2", name: "Project B", status: "inprogress" },
       ]);
       expect(mockDb.project.findMany).toHaveBeenCalledWith({
-        where: { userId: "user-1" },
+        where: { firmId: "firm-1" },
         orderBy: { createdAt: "desc" },
         select: { id: true, name: true, status: true },
       });
@@ -86,6 +98,7 @@ describe("ProjectModel", () => {
         name: "Project A",
         status: "COMPLETE",
         createdAt,
+        firmId: "firm-1",
       });
 
       const result = await ProjectModel.findByIdForUser({
@@ -98,10 +111,17 @@ describe("ProjectModel", () => {
         name: "Project A",
         status: "complete",
         createdAt,
+        firmId: "firm-1",
       });
       expect(mockDb.project.findFirst).toHaveBeenCalledWith({
-        where: { id: "p1", userId: "user-1" },
-        select: { id: true, name: true, status: true, createdAt: true },
+        where: { id: "p1", firmId: "firm-1" },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          createdAt: true,
+          firmId: true,
+        },
       });
     });
 
@@ -122,6 +142,7 @@ describe("ProjectModel", () => {
         name: "Project A",
         status: "invalid",
         createdAt: new Date(),
+        firmId: "firm-1",
       });
 
       const result = await ProjectModel.findByIdForUser({
@@ -130,6 +151,57 @@ describe("ProjectModel", () => {
       });
 
       expect(result?.status).toBe("draft");
+    });
+  });
+
+  describe("createForUser", () => {
+    it("creates projects inside the user's active firm", async () => {
+      mockDb.project.create.mockResolvedValue({ id: "p1" });
+
+      await ProjectModel.createForUser({ name: "Project A", userId: "user-1" });
+
+      expect(mockDb.project.create).toHaveBeenCalledWith({
+        data: {
+          name: "Project A",
+          status: "DRAFT",
+          userId: "user-1",
+          firmId: "firm-1",
+        },
+      });
+    });
+  });
+
+  describe("updateStatusForUser", () => {
+    it("updates project status inside the user's active firm", async () => {
+      mockDb.project.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await ProjectModel.updateStatusForUser({
+        projectId: "p1",
+        userId: "user-1",
+        status: "inprogress",
+      });
+
+      expect(result).toBe(true);
+      expect(mockDb.project.updateMany).toHaveBeenCalledWith({
+        where: { id: "p1", firmId: "firm-1" },
+        data: { status: "IN_PROGRESS" },
+      });
+    });
+  });
+
+  describe("deleteForUser", () => {
+    it("deletes projects inside the user's active firm", async () => {
+      mockDb.project.deleteMany.mockResolvedValue({ count: 1 });
+
+      const result = await ProjectModel.deleteForUser({
+        projectId: "p1",
+        userId: "user-1",
+      });
+
+      expect(result).toBe(true);
+      expect(mockDb.project.deleteMany).toHaveBeenCalledWith({
+        where: { id: "p1", firmId: "firm-1" },
+      });
     });
   });
 });

@@ -65,6 +65,26 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/models/FirmModel", () => ({
+  FirmModel: {
+    ensureDefaultForUser: vi.fn().mockResolvedValue({ firmId: "firm-1", role: "OWNER" }),
+  },
+}));
+
+vi.mock("@/lib/models/BillingModel", () => ({
+  BillingModel: {
+    checkProjectCreation: vi.fn().mockResolvedValue({ allowed: true }),
+    checkWorkflowRun: vi.fn().mockResolvedValue({ allowed: true }),
+    incrementRuns: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+vi.mock("@/lib/models/AuditLogModel", () => ({
+  AuditLogModel: {
+    record: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 const mockBlobList = vi.fn();
 const mockBlobDel = vi.fn();
 vi.mock("@vercel/blob", () => ({

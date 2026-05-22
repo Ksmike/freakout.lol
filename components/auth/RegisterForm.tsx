@@ -36,6 +36,8 @@ export function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(false);
 
   const criteria = evaluatePassword(password);
 
@@ -137,9 +139,48 @@ export function RegisterForm() {
         )}
       </div>
 
+      {/* Terms & Privacy */}
+      <div className="space-y-3 pt-1">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="acceptedTerms"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            required
+            className="mt-0.5 size-4 shrink-0 rounded border-divider accent-primary"
+            aria-describedby="terms-description"
+          />
+          <span id="terms-description" className="text-sm text-foreground/70 leading-snug">
+            I agree to the{" "}
+            <Link href="/terms" className="text-primary hover:underline" target="_blank">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+              Privacy Policy
+            </Link>
+          </span>
+        </label>
+
+        {/* Email opt-in */}
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="emailOptIn"
+            checked={emailOptIn}
+            onChange={(e) => setEmailOptIn(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 rounded border-divider accent-primary"
+          />
+          <span className="text-sm text-foreground/70 leading-snug">
+            Send me product news and updates
+          </span>
+        </label>
+      </div>
+
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !acceptedTerms}
         className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {pending ? "Creating account..." : "Create account"}

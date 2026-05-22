@@ -14,6 +14,7 @@ vi.mock("@/lib/models/ProjectModel", () => ({
 
 const mockFindFirstJob = vi.fn();
 const mockFindFirstArtifact = vi.fn();
+const mockFindUniqueGoal = vi.fn();
 vi.mock("@/lib/db", () => ({
   db: {
     diligenceJob: {
@@ -21,6 +22,9 @@ vi.mock("@/lib/db", () => ({
     },
     diligenceArtifact: {
       findFirst: mockFindFirstArtifact,
+    },
+    assistanceGoal: {
+      findUnique: mockFindUniqueGoal,
     },
   },
 }));
@@ -68,6 +72,7 @@ describe("getProjectForSidebar", () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
     mockFindFirstJob.mockResolvedValue({ id: "job-1" });
     mockFindFirstArtifact.mockResolvedValue({ id: "artifact-1" });
+    mockFindUniqueGoal.mockResolvedValue({ projectId: "project-1" });
     mockFindByIdForUser.mockResolvedValue({
       id: "project-1",
       name: "Acme Corp",
@@ -83,6 +88,7 @@ describe("getProjectForSidebar", () => {
       hasInsights: true,
       hasReports: true,
       hasEnquiries: true,
+      hasDraft: true,
     });
   });
 
@@ -90,6 +96,7 @@ describe("getProjectForSidebar", () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
     mockFindFirstJob.mockResolvedValue(null);
     mockFindFirstArtifact.mockResolvedValue(null);
+    mockFindUniqueGoal.mockResolvedValue(null);
     mockFindByIdForUser.mockResolvedValue({
       id: "project-1",
       name: "Acme Corp",
@@ -105,6 +112,7 @@ describe("getProjectForSidebar", () => {
       hasInsights: false,
       hasReports: false,
       hasEnquiries: false,
+      hasDraft: false,
     });
   });
 });

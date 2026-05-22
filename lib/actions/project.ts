@@ -6,10 +6,14 @@ import { del, list } from "@vercel/blob";
 import { getRun, start } from "workflow/api";
 import { auth } from "@/lib/auth";
 import { ProjectModel } from "@/lib/models/ProjectModel";
+import { FirmModel } from "@/lib/models/FirmModel";
+import { BillingModel } from "@/lib/models/BillingModel";
+import { AuditLogModel } from "@/lib/models/AuditLogModel";
 import { diligenceWorkflow } from "@/lib/diligence/diligence-workflow";
 import { buildProjectBlobPrefix } from "@/lib/blob/documents";
 import { db } from "@/lib/db";
 import {
+  AuditAction,
   type ApiKeyProvider,
   DiligenceJobStatus,
 } from "@/lib/generated/prisma/client";
@@ -28,10 +32,40 @@ export async function createProject(formData: FormData): Promise<void> {
     redirect("/projects/new");
   }
 
+  // Entitlement check: project count limit
+  const firm = await FirmModel.ensureDefaultForUser(session.user.id);
+  const entitlementCheck = await BillingModel.checkProjectCreation(firm.firmId);
+  if (!entitlementCheck.allowed) {
+    // Redirect back with an error query param — the page can surface it
+    redirect(`/projects/new?error=${encodeURIComponent(entitlementCheck.reason)}`);
+  }
+
   const project = await ProjectModel.createForUser({
     name,
     userId: session.user.id,
   });
+
+  await AuditLogModel.record({
+    firmId: firm.firmId,
+    actorUserId: session.user.id,
+    action: AuditAction.PROJECT_CREATED,
+    targetType: "Project",
+    targetId: project.id,
+    metadata: { name },
+  });
+
+  // Set assistance goal if a graph was selected
+  const graphIdEntry = formData.get("graphId");
+  const graphId = typeof graphIdEntry === "string" ? graphIdEntry.trim() : "";
+  if (graphId) {
+    const isEnabled = await (await import("@/lib/models/GraphModel")).GraphModel.isEnabledForFirm(firm.firmId, graphId);
+    if (isEnabled) {
+      await (await import("@/lib/models/GraphModel")).GraphModel.setGoalForProject({
+        projectId: project.id,
+        graphId,
+      });
+    }
+  }
 
   redirect(`/project/${project.id}`);
 }
@@ -58,6 +92,19 @@ export async function startProjectDueDiligence(
 
   if (!updated) {
     return { error: "Project not found." };
+  }
+
+  // Entitlement check: monthly run limit
+  const firm = await FirmModel.ensureDefaultForUser(session.user.id);
+  const runCheck = await BillingModel.checkWorkflowRun(firm.firmId);
+  if (!runCheck.allowed) {
+    // Revert status
+    await ProjectModel.updateStatusForUser({
+      projectId,
+      userId: session.user.id,
+      status: "draft",
+    });
+    return { error: runCheck.reason };
   }
 
   const [
@@ -144,6 +191,19 @@ export async function startProjectDueDiligence(
     };
   }
 
+  // Increment usage meter and write audit log
+  await Promise.all([
+    BillingModel.incrementRuns(firm.firmId),
+    AuditLogModel.record({
+      firmId: firm.firmId,
+      actorUserId: session.user.id,
+      action: AuditAction.WORKFLOW_STARTED,
+      targetType: "DiligenceJob",
+      targetId: jobId,
+      metadata: { projectId, runId },
+    }),
+  ]);
+
   revalidatePath(`/project/${projectId}`);
   revalidatePath("/dashboard");
   return { jobId, runId };
@@ -185,6 +245,16 @@ export async function cancelProjectDueDiligence(
     projectId: job.projectId,
     userId: session.user.id,
     status: "draft",
+  });
+
+  const cancelFirm = await FirmModel.ensureDefaultForUser(session.user.id);
+  await AuditLogModel.record({
+    firmId: cancelFirm.firmId,
+    actorUserId: session.user.id,
+    action: AuditAction.WORKFLOW_CANCELED,
+    targetType: "DiligenceJob",
+    targetId: jobId,
+    metadata: { projectId: job.projectId },
   });
 
   revalidatePath(`/project/${job.projectId}`);
@@ -254,6 +324,16 @@ export async function deleteProject(
   if (!deleted) {
     return { error: "Project not found." };
   }
+
+  const deleteFirm = await FirmModel.ensureDefaultForUser(session.user.id);
+  await AuditLogModel.record({
+    firmId: deleteFirm.firmId,
+    actorUserId: session.user.id,
+    action: AuditAction.PROJECT_DELETED,
+    targetType: "Project",
+    targetId: projectId,
+    metadata: { name: project.name },
+  });
 
   revalidatePath("/dashboard");
   revalidatePath(`/project/${projectId}`);

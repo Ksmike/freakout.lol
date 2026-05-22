@@ -1,0 +1,60 @@
+// ─── Firms & Memberships ────────────────────────────────────────────────────
+
+enum FirmRole {
+    OWNER
+    ADMIN
+    PARTNER
+    ANALYST
+    REVIEWER
+    VIEWER
+}
+
+enum FirmMembershipStatus {
+    INVITED
+    ACTIVE
+    SUSPENDED
+}
+
+model Firm {
+    id                String   @id @default(cuid())
+    name              String
+    slug              String   @unique
+    billingStatus     String   @default("trialing")
+    plan              String   @default("starter")
+    region            String?
+    dataRetentionDays Int?
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    memberships      FirmMembership[]
+    projects         Project[]
+    auditLogs        AuditLog[]
+    billingCustomer  BillingCustomer?
+    planEntitlement  PlanEntitlement?
+    usageMeter       UsageMeter?
+    invoiceEvents    InvoiceEvent[]
+    graphEnablements FirmGraphEnablement[]
+    evidenceMappings EvidenceMapping[]
+
+    @@index([billingStatus])
+    @@index([plan])
+}
+
+model FirmMembership {
+    id         String               @id @default(cuid())
+    firmId     String
+    userId     String
+    role       FirmRole             @default(OWNER)
+    status     FirmMembershipStatus @default(ACTIVE)
+    invitedAt  DateTime?
+    acceptedAt DateTime?
+    createdAt  DateTime             @default(now())
+    updatedAt  DateTime             @updatedAt
+
+    firm Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([firmId, userId])
+    @@index([userId, status])
+    @@index([firmId, role])
+}

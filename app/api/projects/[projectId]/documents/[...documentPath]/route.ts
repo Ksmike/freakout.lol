@@ -2,7 +2,13 @@ import { del, get } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { ProjectDocumentModel } from "@/lib/models/ProjectDocumentModel";
 import { db } from "@/lib/db";
-import { ProjectStatus } from "@/lib/generated/prisma/client";
+import {
+  AuditAction,
+  ProjectStatus,
+} from "@/lib/generated/prisma/client";
+import { FirmModel } from "@/lib/models/FirmModel";
+import { AuditLogModel } from "@/lib/models/AuditLogModel";
+import { logger, generateRequestId } from "@/lib/logger";
 import {
   buildProjectBlobPath,
   sanitizeDocumentPathSegments,
@@ -84,6 +90,7 @@ export async function DELETE(
     params,
   }: { params: Promise<{ projectId: string; documentPath: string[] }> }
 ) {
+  const requestId = generateRequestId();
   const session = await auth();
   const userId = session?.user?.id ?? null;
   if (!userId) {
@@ -123,8 +130,37 @@ export async function DELETE(
       userId,
       pathname,
     });
+
+    // Audit write (best-effort)
+    FirmModel.ensureDefaultForUser(userId).then((firm) =>
+      AuditLogModel.record({
+        firmId: firm.firmId,
+        actorUserId: userId,
+        action: AuditAction.DOCUMENT_DELETED,
+        targetType: "ProjectDocument",
+        targetId: pathname,
+        projectId: sanitizedProjectId,
+        metadata: { pathname, requestId },
+      })
+    ).catch((err) => {
+      logger.warn("delete.audit_failed", { requestId, userId, projectId: sanitizedProjectId }, err);
+    });
+
+    logger.info("document.deleted", {
+      requestId,
+      userId,
+      projectId: sanitizedProjectId,
+      pathname,
+    });
+
     return Response.json({ deleted: true }, { status: 200 });
-  } catch {
+  } catch (err) {
+    logger.error("document.delete_failed", {
+      requestId,
+      userId,
+      projectId: sanitizedProjectId,
+      pathname,
+    }, err);
     return Response.json({ error: "Failed to delete document." }, { status: 500 });
   }
 }

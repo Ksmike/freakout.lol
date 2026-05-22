@@ -5,8 +5,10 @@ import { ProjectModel } from "@/lib/models/ProjectModel";
 import { ProjectDocumentsPanel } from "@/app/(app)/project/[id]/ProjectDocumentsPanel";
 import { ProjectHeader } from "@/app/(app)/project/[id]/ProjectHeader";
 import { DeleteProjectButton } from "@/app/(app)/project/[id]/DeleteProjectButton";
+import { GraphPanel } from "@/app/(app)/project/[id]/GraphPanel";
 import { getApiKeyStatuses } from "@/lib/actions/apiKeys";
 import { DiligenceJobModel } from "@/lib/models/DiligenceJobModel";
+import { getProjectGoalWithRequirements, getProjectGaps, getProjectMappings } from "@/lib/actions/graph";
 
 export const metadata = {
   title: "Project | KG Qualify",
@@ -40,10 +42,13 @@ export default async function ProjectInspectPage({
   const hasAnyApiKeys = apiKeyStatuses.some(
     (status) => status.isSet && status.enabled
   );
-  const diligenceJob = await DiligenceJobModel.findLatestWithStagesForProject({
-    projectId: project.id,
-    userId: session.user.id,
-  });
+  const [diligenceJob, graphGoal] = await Promise.all([
+    DiligenceJobModel.findLatestWithStagesForProject({
+      projectId: project.id,
+      userId: session.user.id,
+    }),
+    getProjectGoalWithRequirements(project.id),
+  ]);
   const insights =
     project.status === "reviewed" || project.status === "complete"
       ? await DiligenceJobModel.getInsightsForProject({
@@ -51,6 +56,13 @@ export default async function ProjectInspectPage({
           userId: session.user.id,
         })
       : null;
+
+  const [gaps, mappings] = graphGoal
+    ? await Promise.all([
+        getProjectGaps(project.id),
+        getProjectMappings(project.id),
+      ])
+    : [[], []];
   const formattedCreatedAt = new Intl.DateTimeFormat(session.user.locale ?? "en", {
     dateStyle: "medium",
   }).format(project.createdAt);
@@ -75,6 +87,17 @@ export default async function ProjectInspectPage({
         insights={insights}
         labels={labels.app.projectInspect}
       />
+
+      {/* Graph evidence gaps panel */}
+      {graphGoal && labels.app.graphWorkflow && (
+        <GraphPanel
+          projectId={project.id}
+          graphName={graphGoal.graph.name}
+          gaps={gaps}
+          mappings={mappings}
+          labels={labels.app.graphWorkflow}
+        />
+      )}
 
       <div className="flex justify-end pt-2">
         <DeleteProjectButton
