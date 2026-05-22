@@ -100,23 +100,24 @@ export async function createCheckoutSession(
 export async function syncCheckoutSession(
   checkoutSessionId: string
 ): Promise<BillingSyncResult> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { status: "error", message: "Not authenticated." };
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { status: "error", message: "Not authenticated." };
+    }
 
-  if (!checkoutSessionId) {
-    return {
-      status: "pending",
-      message: "Stripe returned without a checkout session id.",
-    };
-  }
+    if (!checkoutSessionId) {
+      return {
+        status: "pending",
+        message: "Stripe returned without a checkout session id.",
+      };
+    }
 
-  const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
-  const checkoutSession = await stripe.checkout.sessions.retrieve(
-    checkoutSessionId,
-    { expand: ["subscription", "subscription.items.data.price.product"] }
-  );
+    const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
+    const checkoutSession = await stripe.checkout.sessions.retrieve(
+      checkoutSessionId,
+      { expand: ["subscription", "subscription.items.data.price.product"] }
+    );
 
   if (checkoutSession.metadata?.firmId !== firm.firmId) {
     return {
@@ -206,6 +207,13 @@ export async function syncCheckoutSession(
     plan: planKey,
     subscriptionStatus: subscription.status,
   };
+  } catch (error) {
+    console.error("[syncCheckoutSession] Error:", error);
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unexpected error syncing checkout session.",
+    };
+  }
 }
 
 /**

@@ -35,7 +35,12 @@ export default async function BillingSettingsPage({
   const checkoutSessionId = getSearchParam(resolvedSearchParams.session_id);
   const billingSync =
     billingReturn === "success"
-      ? await syncCheckoutSession(checkoutSessionId ?? "")
+      ? await syncCheckoutSession(checkoutSessionId ?? "").catch(
+          (): BillingSyncResult => ({
+            status: "error",
+            message: "Failed to sync checkout session. Please refresh the page.",
+          })
+        )
       : null;
   const billing = await getBillingSummary();
   const t = labels.app.settings;
