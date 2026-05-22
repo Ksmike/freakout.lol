@@ -3,7 +3,7 @@ import { getApiKeyStatuses } from "@/lib/actions/apiKeys";
 import { ApiKeySection } from "@/components/settings/ApiKeySection";
 
 export const metadata = {
-  title: "Settings | DD Qualify",
+  title: "Settings | KG Qualify",
 };
 
 export default async function SettingsPage() {

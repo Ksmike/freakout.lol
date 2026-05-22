@@ -173,7 +173,7 @@ export function MobileSidebar() {
         aria-modal={isOpen ? true : undefined}
       >
         <div className="flex items-center justify-between border-b border-divider px-4 py-4">
-          <span className="text-base font-semibold text-foreground">DD Qualify</span>
+          <span className="text-base font-semibold text-foreground">KG Qualify</span>
           <button
             onClick={closeMenu}
             className="rounded-md p-1.5 text-foreground/60 transition-colors hover:bg-content2 hover:text-foreground"

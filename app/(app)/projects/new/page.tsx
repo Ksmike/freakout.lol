@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { createProject } from "@/lib/actions/project";
 
 export const metadata = {
-  title: "Create Project | DD Qualify",
+  title: "Create Project | KG Qualify",
 };
 
 export default async function ProjectCreationPage() {

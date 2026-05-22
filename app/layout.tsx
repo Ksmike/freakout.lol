@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "DD Qualify | Source-of-Truth Intelligence for Investment Diligence",
+  title: "KG Qualify | Evidence-Backed Knowledge Graphs for Compliance",
   description:
-    "DD Qualify is the source-of-truth intelligence layer for VC and PE diligence teams. Every claim from every source — triangulated automatically, with gaps closed and contradictions surfaced.",
+    "KG Qualify makes SOC 2, ISO 27001, GDPR, and diligence workflows easier with document mapping, gap detection, and source-backed outputs.",
 };
 
 // Runs synchronously before React hydrates — prevents flash of wrong theme.

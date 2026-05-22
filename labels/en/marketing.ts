@@ -2,84 +2,84 @@ import type { MarketingLabels } from "@/labels/types";
 
 export const marketingLabels: MarketingLabels = {
   hero: {
-    badge: "Source-of-Truth Intelligence for Investment Diligence",
-    title: "Every claim. Every source. Triangulated automatically.",
+    badge: "Technology for Compliance",
+    title: "Evidence-backed knowledge graphs for compliance workflows.",
     description:
-      "DD Qualify is the source-of-truth intelligence layer for VC and PE diligence teams. Every claim from every source — triangulated automatically, with gaps closed and contradictions surfaced.",
+      "SOC 2, ISO 27001, GDPR, and diligence workflows made easier with document mapping, gap detection, and source-backed outputs.",
     trialCta: "Start Free Trial",
     demoCta: "See It in Action",
     segmentLabels: [
-      "VC",
-      "Growth Equity",
-      "PE",
-      "M&A",
+      "SOC 2",
+      "ISO 27001",
+      "GDPR",
+      "Vendor Review",
       "CDD",
-      "Expert Networks",
+      "PE Diligence",
     ],
   },
   metrics: [
-    { label: "Sources triangulated per engagement", value: "12+" },
-    { label: "Claims structured automatically", value: "1,000+" },
-    { label: "Contradictions surfaced without manual review", value: "100%" },
+    { label: "Evidence sources mapped per workflow", value: "12+" },
+    { label: "Controls and claims structured automatically", value: "1,000+" },
+    { label: "Outputs traceable to source evidence", value: "100%" },
   ],
   workflow: {
-    heading: "How DD Qualify works",
+    heading: "How KG Qualify works",
     steps: [
       {
-        title: "Ingest",
+        title: "Choose",
         description:
-          "Connect pitch decks, CDD reports, expert call transcripts, and data room documents in one intake flow — no change to existing workflows.",
+          "Select a regulated workflow such as SOC 2, ISO 27001, GDPR, vendor review, or commercial diligence from an admin-approved knowledge graph.",
       },
       {
-        title: "Triangulate",
+        title: "Map",
         description:
-          "Claims are structured into the intelligence graph and triangulated across sources. Convergence, divergence, and source gaps are detected automatically.",
+          "Upload policies, contracts, reports, call notes, and data room files. Evidence is structured into the graph against required controls, claims, entities, and form fields.",
       },
       {
-        title: "Surface",
+        title: "Complete",
         description:
-          "Contradictions are flagged with provenance. Gaps are identified and chased. Your team gets a living, breathing picture of every deal that deepens with every source.",
+          "Gaps are surfaced, follow-up questions are generated, and forms, reports, and review packs are drafted with provenance back to every source document.",
       },
     ],
   },
   coverage: {
-    heading: "Intelligence your deal team trusts",
+    heading: "Knowledge workflows your firm can trust",
     description:
-      "Built specifically for the problems VC and PE diligence teams face — disparate sources making conflicting claims about a single deal.",
+      "Built for regulated workflows where teams need to prove what they know, where it came from, and what is still missing.",
     items: [
-      "Convergence and divergence across all sources",
-      "Contradictions surfaced, not buried",
-      "Source-gap detection across the engagement",
-      "Conviction tested against the investment thesis",
-      "Every claim weighed against what the team prioritises",
-      "Disagreements between sources flagged, with provenance",
+      "Industry-specific knowledge graphs nominated by admins",
+      "Evidence requirements mapped to source documents",
+      "Gap detection across controls, forms, and diligence questions",
+      "Human review before conclusions or submissions",
+      "Firm-scoped workspaces for multiple teams and engagements",
+      "Every output linked back to source evidence",
     ],
-    outcomesTitle: "Pilot outcomes",
+    outcomesTitle: "Workflow outcomes",
     outcomesParagraphs: [
-      "Due diligence teams are drowning in data. Every deal generates dozens of sources — pitch decks, interview transcripts, CDD reports, expert calls — each making claims about the target. Associates spend weeks manually stitching them together into a memo. Insights fall through the cracks. Contradictions go unnoticed. Gaps rarely get chased down.",
-      "Teams using DD Qualify in pilot eliminated manual claim-stitching and surfaced contradictions before signing — producing a complete picture of every deal without extra work or changes to existing workflows.",
+      "Regulated teams spend too much time manually translating scattered documents into questionnaires, control evidence, diligence packs, and review notes. The hard part is not just extraction; it is knowing which evidence satisfies which requirement and what still needs to be gathered.",
+      "KG Qualify turns each workflow into a closed loop: nominate the graph, upload evidence, map what is known, ask for what is missing, and draft the output with a complete provenance trail.",
     ],
   },
   taxonomy: {
-    heading: "Built-in intelligence labels",
+    heading: "Built-in workflow labels",
     description:
-      "Standardised labels are attached to every diligence workspace so teams can filter signals, route reviewers, and keep reporting consistent across the engagement.",
+      "Standardised labels are attached to every workspace so teams can filter evidence, route reviewers, and keep regulated outputs consistent across engagements.",
     items: [
-      "Convergence",
-      "Divergence",
-      "Source Gap",
-      "Contradiction",
+      "Control Evidence",
+      "Requirement Gap",
+      "Source Conflict",
       "Unverified Claim",
-      "Conviction Signal",
+      "Reviewer Action",
+      "Ready for Export",
     ],
   },
   cta: {
-    heading: "Ready to triangulate your next deal?",
+    heading: "Ready to simplify your next compliance workflow?",
     description:
-      "Launch a workspace in minutes, connect your sources, and get a structured intelligence graph before your next partner meeting.",
+      "Launch a workspace in minutes, choose an assistance goal, upload your sources, and generate evidence-backed outputs for review.",
     createWorkspaceCta: "Create Workspace",
     contactSalesCta: "Get in Touch",
     footnote:
-      "Enterprise-ready API, SOC 2 roadmap, and role-based permissions available.",
+      "Multi-tenant firms, role-based permissions, provenance, and auditability built into the roadmap.",
   },
 };

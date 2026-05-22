@@ -1,7 +1,7 @@
 import { RegisterForm } from "@/components/auth/RegisterForm";
 
 export const metadata = {
-  title: "Register | DD Qualify",
+  title: "Register | KG Qualify",
 };
 
 export default function RegisterPage() {
@@ -13,7 +13,7 @@ export default function RegisterPage() {
             Create an account
           </h1>
           <p className="mt-1 text-sm text-foreground/60">
-            Get started with DD Qualify
+            Get started with KG Qualify
           </p>
         </div>
         <RegisterForm />

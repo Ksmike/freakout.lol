@@ -1,6 +1,6 @@
 ## Context
 
-This document describes how I would take the current `DD Qualify` Stage 2 prototype to a production-ready project development platform for multiple teams, multiple concurrent projects, and multiple contributors per team.
+This document describes how I would take the current `KG Qualify` Stage 2 prototype to a production-ready knowledge graph platform for multiple firms, multiple concurrent deals or regulated workflows, and multiple contributors per firm.
 
 The current prototype already has the right core shape:
 
@@ -8,7 +8,7 @@ The current prototype already has the right core shape:
 - a Postgres-backed domain model
 - object storage for source documents
 - an asynchronous diligence workflow
-- structured outputs such as claims, findings, contradictions, reports, and enquiries
+- structured outputs such as claims, findings, contradictions, evidence gaps, forms, reports, and enquiries
 
 For production, I would keep those foundations, but I would change the trust boundaries and data model. The most important shift is that the app should stop acting like a single-user diligence runner and start acting like a multi-tenant system of record for firms, deals, evidence, analyst positions, and imported structured intelligence.
 
@@ -42,7 +42,8 @@ For production, I would keep those foundations, but I would change the trust bou
 
 ```mermaid
 flowchart LR
-  Analyst["Analyst"]
+  Analyst["Analyst / Reviewer"]
+  Admin["Firm Admin"]
   Assistant["External AI Assistant via MCP"]
   UI["Next.js Web App"]
   API["App API / BFF"]
@@ -51,27 +52,26 @@ flowchart LR
   Blob["Private Object Storage"]
   Queue["Queue / Workflow Engine"]
   Importer["Knowledge Import Worker"]
+  Graphs["Industry Knowledge Graph Registry"]
   KE["Knowledge Engineering Pipeline"]
-  Voice["Voice AI Services"]
   MCP["Read-only MCP Server"]
   Obs["Logs / Metrics / Traces / Alerts"]
 
   Analyst --> UI
+  Admin --> UI
   UI --> API
   API --> Auth
   API --> DB
   API --> Blob
   API --> Queue
+  API --> Graphs
   API --> MCP
 
   Queue --> Importer
   Importer --> DB
   Importer --> Blob
+  Graphs --> Importer
   KE --> Importer
-
-  Voice --> Blob
-  Voice --> Queue
-  Queue --> Voice
 
   Assistant --> MCP
   MCP --> Auth
@@ -159,6 +159,27 @@ I would explicitly separate confidential deal data from reusable firm-level lear
   - coverage heuristics
 
 The critical rule is that firm-level intelligence should be derived from sanitized aggregates, not by exposing deal-level claims across engagements.
+
+### Knowledge graph and assistance model
+
+The product should make knowledge graphs first-class configuration, not hidden pipeline internals. Admins should be able to nominate or manage graph definitions for a firm, industry, standard, or workflow, and users should be able to select an assistance goal before uploading evidence.
+
+I would add these concepts alongside the existing diligence model:
+
+- `KnowledgeGraphDefinition`
+  - versioned ontology for an industry, standard, or workflow
+  - examples: SOC 2, ISO 27001, GDPR, vendor review, commercial due diligence
+- `AssistanceGoal`
+  - user-selected objective for a workspace
+  - binds a project or deal to one graph definition and output workflow
+- `EvidenceRequirement`
+  - required control, question, claim, policy, contract term, or diligence item
+- `EvidenceMapping`
+  - links uploaded source passages, extracted claims, and analyst answers to graph requirements
+- `OutputTemplate`
+  - form, report, questionnaire, or review pack structure that can be drafted from mapped evidence
+
+This shifts the platform from generic document analysis toward closed-loop knowledge gathering. The system should not just extract facts; it should know what the selected workflow requires, what evidence already satisfies those requirements, what is missing, and which output fields can be filled with provenance.
 
 ## Multi-Tenancy and Data Isolation
 
@@ -325,24 +346,38 @@ The MCP server should not be a thin passthrough to internal tables. It should be
 
 I would keep the workspace API and the MCP API backed by the same authorization and domain services, but I would expose them through separate entry points. That reduces the chance of assistant-specific requirements leaking into the interactive product surface.
 
-## Voice AI
+## Closed-Loop Knowledge Graph Workflows
 
-Voice should be treated as another ingestion channel, not as a special subsystem.
+The workflow expansion should focus on configurable knowledge graphs and evidence-backed assistance workflows.
 
-### Phase 1
+### Admin graph setup
 
-- capture structured notes during project creation
-- store raw audio privately
-- store transcript as a `SourceDocument`
-- route transcript through the same ingestion contract as any other source
+Admins should be able to nominate graph definitions for specific industries, standards, and review types. Each definition should describe:
 
-### Phase 2
+- the ontology and vocabulary for the workflow
+- required evidence and acceptable source types
+- gap rules and reviewer escalation rules
+- form fields, report sections, and export templates
+- version history and migration rules for existing workspaces
 
-- autonomous reference/founder calls run as background jobs
-- require explicit workflow state, approval rules, and audit trails
-- all generated transcripts and summaries re-enter the deal as normal sources
+Graph definitions should be firm-visible only when explicitly enabled for that firm. This preserves multi-tenant boundaries while still allowing the platform to maintain reusable graph templates.
 
-I would not make outbound autonomous calling part of the initial production hardening milestone. It adds material compliance and reputational risk. I would ship human-assisted transcript ingestion first.
+### User workflow
+
+Users should be able to:
+
+1. create a workspace inside their firm
+2. choose an assistance goal such as SOC 2, ISO 27001, GDPR, vendor review, or due diligence
+3. upload documents and answer structured questions
+4. run processing against the selected graph
+5. review mapped evidence, missing requirements, and conflicts
+6. generate forms, reports, questionnaires, or review packs with source citations
+
+This gives the product a clear closed loop: define what the workflow needs, gather documents, map evidence, ask for missing information, and draft outputs for human review.
+
+### Guardrails
+
+The platform should remain assistive. It can prepare evidence-backed outputs and identify gaps, but final conclusions, regulatory submissions, and external representations should remain human-approved actions with audit logs.
 
 ## Infrastructure and Deployment
 
@@ -358,7 +393,7 @@ I would optimize for a small team that needs to move quickly without building a 
   - S3 or equivalent private blob storage
 - Queue/workflows:
   - keep the existing workflow engine for app-side orchestration
-  - add a queue-backed importer for knowledge snapshots and voice tasks
+  - add a queue-backed importer for knowledge snapshots and graph-mapping tasks
 - Cache and rate limiting:
   - Redis or managed equivalent
 - Observability:
@@ -384,7 +419,7 @@ flowchart TB
   subgraph Async["Background Processing"]
     WF["Workflow / Queue"]
     IMP["Importer Worker"]
-    VOICE["Voice Worker"]
+    GRAPH["Graph Mapping Worker"]
   end
 
   Web --> PG
@@ -395,11 +430,11 @@ flowchart TB
   MCP --> OBJ
   MCP --> REDIS
   WF --> IMP
-  WF --> VOICE
+  WF --> GRAPH
   IMP --> PG
   IMP --> OBJ
-  VOICE --> PG
-  VOICE --> OBJ
+  GRAPH --> PG
+  GRAPH --> OBJ
 ```
 
 ### Reliability posture
@@ -506,9 +541,11 @@ Those may become necessary later, but they are not where I would spend pre-seed 
 ### Phase 3: workflow expansion
 
 - first-class analyst positions and revision history
+- admin-nominated industry and regulatory knowledge graphs
+- user-selected assistance goals for SOC 2, ISO 27001, GDPR, vendor review, and due diligence
+- evidence requirement mapping, gap follow-up, and output template generation
 - firm-level aggregate intelligence layer
-- voice transcript ingestion
-- more advanced assistant workflows
+- more advanced assistant workflows grounded in firm-scoped graph state
 
 ## Key Trade-Offs
 
@@ -516,7 +553,7 @@ Those may become necessary later, but they are not where I would spend pre-seed 
 
 - keep a single relational database rather than splitting operational and analytical stores immediately
 - keep one main region until customer or compliance pressure justifies more
-- postpone autonomous outbound voice workflows
+- postpone autonomous regulatory submissions and external representations
 - postpone deep microservice decomposition
 
 ### Where I would not cut corners
@@ -537,4 +574,4 @@ The production version of the project development platform should remain a fairl
 - one async processing plane
 - one read-only external integration surface
 
-The complexity should go into the right places: tenant isolation, evidence provenance, versioned imports from the knowledge-engineering pipeline, and analyst trust in the outputs. That is the shortest path from the Stage 2 prototype to a platform that PE firms can actually use with sensitive deal data.
+The complexity should go into the right places: tenant isolation, evidence provenance, versioned graph definitions, versioned imports from the knowledge-engineering pipeline, and analyst trust in the outputs. That is the shortest path from the Stage 2 prototype to a platform that PE firms and regulated teams can actually use with sensitive workflow data.

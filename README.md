@@ -1,6 +1,6 @@
-# DD Qualify
+# KG Qualify
 
-`DD Qualify` is a document-driven due-diligence prototype for private equity workflows.
+`KG Qualify` is a document-driven due-diligence prototype for private equity workflows.
 It ingests deal documents, runs a staged analysis pipeline, highlights risks/claims/contradictions, generates structured reports, and supports analyst enquiries against generated evidence.
 
 ## Assessment Fit

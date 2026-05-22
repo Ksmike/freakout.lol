@@ -6,7 +6,7 @@ import { DiligenceJobModel } from "@/lib/models/DiligenceJobModel";
 import { ReportsView } from "./ReportsView";
 
 export const metadata = {
-  title: "Reports | DD Qualify",
+  title: "Reports | KG Qualify",
 };
 
 type ReportsPageProps = {

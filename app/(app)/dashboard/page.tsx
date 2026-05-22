@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { ProjectModel } from "@/lib/models/ProjectModel";
 
 export const metadata = {
-  title: "Dashboard | DD Qualify",
+  title: "Dashboard | KG Qualify",
 };
 
 export default async function DashboardPage() {

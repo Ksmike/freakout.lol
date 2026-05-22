@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const metadata = {
-  title: "Login | DD Qualify",
+  title: "Login | KG Qualify",
 };
 
 export default function LoginPage() {

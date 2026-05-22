@@ -26,7 +26,7 @@ export default async function AppLayout({
         <header className="flex w-full min-w-0 items-center gap-3 border-b border-divider bg-background px-4 py-3 md:hidden">
           <MobileSidebar />
           <span className="text-sm font-semibold text-foreground">
-            DD Qualify
+            KG Qualify
           </span>
         </header>
 

@@ -15,35 +15,35 @@ const TAXONOMY_STYLES: Record<
   string,
   { bg: string; text: string; dot: string }
 > = {
-  Convergence: {
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    dot: "bg-emerald-500",
+  "Control Evidence": {
+    bg: "bg-primary/10",
+    text: "text-primary",
+    dot: "bg-primary",
   },
-  Divergence: {
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    dot: "bg-amber-500",
+  "Requirement Gap": {
+    bg: "bg-warning/10",
+    text: "text-warning",
+    dot: "bg-warning",
   },
-  "Source Gap": {
-    bg: "bg-orange-50",
-    text: "text-orange-700",
-    dot: "bg-orange-500",
-  },
-  Contradiction: {
-    bg: "bg-red-50",
-    text: "text-red-700",
-    dot: "bg-red-500",
+  "Source Conflict": {
+    bg: "bg-danger/10",
+    text: "text-danger",
+    dot: "bg-danger",
   },
   "Unverified Claim": {
-    bg: "bg-violet-50",
-    text: "text-violet-700",
-    dot: "bg-violet-500",
+    bg: "bg-secondary/10",
+    text: "text-secondary",
+    dot: "bg-secondary",
   },
-  "Conviction Signal": {
-    bg: "bg-sky-50",
-    text: "text-sky-700",
-    dot: "bg-sky-500",
+  "Reviewer Action": {
+    bg: "bg-content2",
+    text: "text-foreground/70",
+    dot: "bg-foreground/30",
+  },
+  "Ready for Export": {
+    bg: "bg-success/10",
+    text: "text-success",
+    dot: "bg-success",
   },
 };
 
@@ -79,12 +79,8 @@ export default function HomePage() {
 
           {/* H1 */}
           <h1 className="text-3xl font-bold leading-[1.15] tracking-tight text-white sm:text-5xl sm:leading-[1.1] lg:text-[4.5rem]">
-            Every claim.
-            <br />
-            Every source.
-            <br />
             <span className="bg-gradient-to-r from-[#f0917a] via-[#e8755a] to-[#d4503a] bg-clip-text text-transparent">
-              Triangulated automatically.
+              {m.hero.title}
             </span>
           </h1>
 

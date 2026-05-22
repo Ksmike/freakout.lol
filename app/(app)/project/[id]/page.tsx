@@ -9,7 +9,7 @@ import { getApiKeyStatuses } from "@/lib/actions/apiKeys";
 import { DiligenceJobModel } from "@/lib/models/DiligenceJobModel";
 
 export const metadata = {
-  title: "Project | DD Qualify",
+  title: "Project | KG Qualify",
 };
 
 type ProjectInspectPageProps = {
