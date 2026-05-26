@@ -94,6 +94,7 @@ const {
   cancelSubscriptionAtPeriodEnd,
   createCheckoutSession,
   createPortalSession,
+  createSeatCheckoutSession,
   syncCheckoutSession,
 } = await import("@/lib/actions/billing");
 
@@ -135,6 +136,28 @@ describe("billing actions", () => {
         success_url:
           "https://dd-qualify.vercel.app/settings/billing?billing=success&session_id={CHECKOUT_SESSION_ID}",
         cancel_url: "https://dd-qualify.vercel.app/settings/billing?billing=canceled",
+      })
+    );
+  });
+
+  it("enables promotion codes for seat checkout sessions", async () => {
+    vi.stubEnv("STRIPE_SEAT_PRICE_ID", "price_seat");
+    mocks.billingModel.findCustomerByFirmId.mockResolvedValue({
+      id: "billing-customer-1",
+      stripeCustomerId: "cus_1",
+    });
+    mocks.stripe.checkout.sessions.create.mockResolvedValue({
+      url: "https://stripe.example/checkout",
+    });
+
+    await expect(createSeatCheckoutSession()).rejects.toThrow(
+      "REDIRECT:https://stripe.example/checkout"
+    );
+
+    expect(mocks.stripe.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allow_promotion_codes: true,
+        line_items: [{ price: "price_seat", quantity: 1 }],
       })
     );
   });
