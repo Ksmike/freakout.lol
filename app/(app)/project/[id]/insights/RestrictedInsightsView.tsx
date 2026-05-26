@@ -23,6 +23,67 @@ type Props = {
   data: RestrictedDiligenceInsights | null;
 };
 
+/**
+ * Static sample findings used to populate the teaser view.
+ * None of this is real user data — it's purely illustrative.
+ */
+const SAMPLE_FINDINGS = [
+  {
+    type: "RISK",
+    title: "Key-Person Dependency in Technical Architecture",
+    summary:
+      "Core platform knowledge concentrated in a single engineer, creating bus-factor risk for the technical roadmap.",
+    severity: "high",
+  },
+  {
+    type: "RISK",
+    title: "Data Sensitivity Concerns",
+    summary:
+      "Customer data handling practices may not align with enterprise compliance requirements in target markets.",
+    severity: "high",
+  },
+  {
+    type: "RISK",
+    title: "Hiring Shortfalls",
+    summary:
+      "Engineering hiring targets missed in recent quarters, indicating potential challenges scaling the team.",
+    severity: "medium",
+  },
+  {
+    type: "OPPORTUNITY",
+    title: "Untapped Enterprise Segment",
+    summary:
+      "Strong product-market fit signals in mid-market suggest upside potential in enterprise expansion.",
+    severity: "medium",
+  },
+];
+
+const SAMPLE_CLAIMS = [
+  {
+    claimText:
+      "The addressable market for diligence software is estimated at $500M ARR.",
+    status: "CONTRADICTED",
+    confidence: 0.1,
+  },
+  {
+    claimText: "The company's NRR exceeds 130% across all cohorts.",
+    status: "CONTRADICTED",
+    confidence: 0.1,
+  },
+  {
+    claimText:
+      "Major clients signed multi-year contracts in Q3, validating the enterprise motion.",
+    status: "INCONCLUSIVE",
+    confidence: 0.4,
+  },
+  {
+    claimText:
+      "Revenue grew 3x year-over-year driven by organic product-led growth.",
+    status: "SUPPORTED",
+    confidence: 0.85,
+  },
+];
+
 const findingTypeIcons = {
   RISK: LuTriangleAlert,
   OPPORTUNITY: LuLightbulb,
@@ -49,11 +110,18 @@ const claimStatusColors: Record<string, string> = {
   INCONCLUSIVE: "text-warning",
 };
 
-export function RestrictedInsightsView({ projectName, labels, paywallLabels, data }: Props) {
+export function RestrictedInsightsView({
+  projectName,
+  labels,
+  paywallLabels,
+  data,
+}: Props) {
   if (!data) {
     return (
       <div className="min-w-0 w-full space-y-4">
-        <h1 className="text-2xl font-semibold text-foreground">{labels.heading}</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          {labels.heading}
+        </h1>
         <p className="text-foreground/60">{labels.empty}</p>
       </div>
     );
@@ -62,95 +130,127 @@ export function RestrictedInsightsView({ projectName, labels, paywallLabels, dat
   return (
     <div className="min-w-0 w-full space-y-8 overflow-x-hidden">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">{labels.heading}</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          {labels.heading}
+        </h1>
         <p className="mt-1 break-words text-sm text-foreground/60">
           {projectName} - {labels.description}
         </p>
       </div>
 
-      {data.findings.length > 0 && (
-        <section>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <LuTriangleAlert className="size-5" aria-hidden="true" />
-            {labels.findingsHeading}
-            <span className="text-sm font-normal text-foreground/50">
-              ({data.findings.length})
-            </span>
-          </h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            {data.findings.map((finding, index) => {
-              const Icon =
-                findingTypeIcons[finding.type as keyof typeof findingTypeIcons] ?? LuEye;
-              const color = findingTypeColors[finding.type] ?? "text-foreground/60";
+      {/* Teaser findings — fake sample data with blur overlay */}
+      <section className="relative">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <LuTriangleAlert className="size-5" aria-hidden="true" />
+          {labels.findingsHeading}
+          <span className="text-sm font-normal text-foreground/50">
+            ({data.findings.length})
+          </span>
+        </h2>
 
-              return (
-                <div
-                  key={`${finding.type}-${index}`}
-                  className="rounded-lg border border-divider bg-content1 p-4"
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className={`size-4 ${color}`} aria-hidden="true" />
-                    <span className={`text-xs font-medium uppercase ${color}`}>
-                      {labels.findingTypes[
-                        finding.type as keyof typeof labels.findingTypes
-                      ] ?? finding.type}
-                    </span>
-                  </div>
-                  <RestrictedTextSkeleton />
-                  {finding.severity && (
+        <div className="relative mt-3">
+          {/* Blurred sample content */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none blur-[6px]"
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              {SAMPLE_FINDINGS.map((finding, index) => {
+                const Icon =
+                  findingTypeIcons[
+                    finding.type as keyof typeof findingTypeIcons
+                  ] ?? LuEye;
+                const color =
+                  findingTypeColors[finding.type] ?? "text-foreground/60";
+
+                return (
+                  <div
+                    key={index}
+                    className="rounded-lg border border-divider bg-content1 p-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon
+                        className={`size-4 ${color}`}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className={`text-xs font-medium uppercase ${color}`}
+                      >
+                        {finding.type}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 text-sm font-semibold text-foreground">
+                      {finding.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-foreground/70">
+                      {finding.summary}
+                    </p>
                     <p className="mt-3 border-t border-divider/50 pt-2 text-xs">
                       <span className="font-medium text-foreground/60">
                         {labels.severityLabel}:{" "}
                       </span>
                       <SeverityBadge severity={finding.severity} />
                     </p>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {data.claims.length > 0 && (
-        <section>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-            <LuShieldCheck className="size-5" aria-hidden="true" />
-            {labels.claimsHeading}
-            <span className="text-sm font-normal text-foreground/50">
-              ({data.claims.length})
-            </span>
-          </h2>
-          <div className="mt-3 space-y-2">
-            {data.claims.map((claim, index) => {
-              const Icon =
-                claimStatusIcons[claim.status as keyof typeof claimStatusIcons] ??
-                LuCircleHelp;
-              const color = claimStatusColors[claim.status] ?? "text-foreground/60";
+      {/* Teaser claims — fake sample data with blur overlay */}
+      <section className="relative">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+          <LuShieldCheck className="size-5" aria-hidden="true" />
+          {labels.claimsHeading}
+          <span className="text-sm font-normal text-foreground/50">
+            ({data.claims.length})
+          </span>
+        </h2>
 
-              return (
-                <div
-                  key={`${claim.status}-${index}`}
-                  className="flex items-start gap-3 rounded-lg border border-divider bg-content1 p-4"
-                >
-                  <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} aria-hidden="true" />
-                  <div className="flex-1">
-                    <RestrictedTextSkeleton />
-                    <div className="mt-2 flex items-center gap-3 text-xs text-foreground/50">
-                      <span className={color}>
-                        {labels.claimStatuses[
-                          claim.status as keyof typeof labels.claimStatuses
-                        ] ?? claim.status}
-                      </span>
-                      <ConfidenceBadge value={claim.confidence} />
+        <div className="relative mt-3">
+          {/* Blurred sample content */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none blur-[6px]"
+          >
+            <div className="space-y-2">
+              {SAMPLE_CLAIMS.map((claim, index) => {
+                const Icon =
+                  claimStatusIcons[
+                    claim.status as keyof typeof claimStatusIcons
+                  ] ?? LuCircleHelp;
+                const color =
+                  claimStatusColors[claim.status] ?? "text-foreground/60";
+
+                return (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 rounded-lg border border-divider bg-content1 p-4"
+                  >
+                    <Icon
+                      className={`mt-0.5 size-4 shrink-0 ${color}`}
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm text-foreground">
+                        {claim.claimText}
+                      </p>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-foreground/50">
+                        <span className={color}>{claim.status}</span>
+                        <span className="text-xs font-medium">
+                          {Math.round(claim.confidence * 100)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* Upgrade CTA */}
       <section className="rounded-xl border border-divider bg-content1 p-6">
@@ -188,25 +288,6 @@ export function RestrictedInsightsView({ projectName, labels, paywallLabels, dat
       </section>
     </div>
   );
-}
-
-function RestrictedTextSkeleton() {
-  return (
-    <div aria-hidden="true" className="mt-2 space-y-2">
-      <div className="h-3 w-3/4 rounded-full bg-content3" />
-      <div className="h-3 w-1/2 rounded-full bg-content3" />
-    </div>
-  );
-}
-
-function ConfidenceBadge({ value }: { value: number | null }) {
-  if (value === null) return null;
-
-  const pct = Math.round(value * 100);
-  const color =
-    pct >= 80 ? "text-success" : pct >= 50 ? "text-warning" : "text-danger";
-
-  return <span className={`text-xs font-medium ${color}`}>{pct}%</span>;
 }
 
 function SeverityBadge({ severity }: { severity: string }) {

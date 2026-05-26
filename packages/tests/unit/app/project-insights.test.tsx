@@ -258,12 +258,20 @@ describe("RestrictedInsightsView", () => {
       />
     );
 
+    // Shows section headings with real counts
     expect(screen.getByText("Findings")).toBeInTheDocument();
-    expect(screen.getByText("Risk")).toBeInTheDocument();
-    expect(screen.getByText("Severity:")).toBeInTheDocument();
-    expect(screen.getByText("high")).toBeInTheDocument();
     expect(screen.getByText("Claims")).toBeInTheDocument();
-    expect(screen.getByText("Contradicted")).toBeInTheDocument();
-    expect(screen.getByText("10%")).toBeInTheDocument();
+
+    // Shows upgrade CTA
+    expect(
+      screen.getByText("Upgrade to unlock full insights")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Upgrade now" })).toHaveAttribute(
+      "href",
+      "/settings/billing"
+    );
+
+    // Does NOT render real user data — only fake sample content behind blur
+    expect(screen.queryByText("Contradicted")).not.toBeInTheDocument();
   });
 });
