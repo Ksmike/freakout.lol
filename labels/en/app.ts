@@ -6,6 +6,7 @@ export const appLabels: AppLabels["app"] = {
     description: "Your knowledge graph workspaces.",
     projectsHeading: "Projects",
     createProjectCta: "Create project",
+    emptyProjects: "No projects yet. Create a project to begin your investigation.",
     statusHeading: "Status",
     inspectCta: "Inspect",
     statuses: {

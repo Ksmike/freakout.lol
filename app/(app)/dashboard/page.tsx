@@ -16,10 +16,6 @@ export default async function DashboardPage() {
 
   const projects = await ProjectModel.listByUserId(session.user.id);
 
-  if (projects.length === 0) {
-    redirect("/projects/new");
-  }
-
   const { labels } = getLabelsForLocale(session.user.locale ?? "en");
   const statusClasses = {
     draft: "bg-content2 text-foreground/80",
@@ -48,33 +44,39 @@ export default async function DashboardPage() {
             {labels.app.dashboard.createProjectCta}
           </Link>
         </div>
-        <ul className="mt-3 space-y-2">
-          {projects.map((project) => (
-            <li key={project.id}>
-              <Link
-                href={`/project/${project.id}`}
-                className="flex flex-col gap-2 rounded-md border border-divider bg-content1 px-4 py-3 transition-colors hover:bg-content2 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
-                  <p className="mt-1 text-xs text-foreground/60">
-                    {labels.app.dashboard.statusHeading}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[project.status]}`}
-                  >
-                    {labels.app.dashboard.statuses[project.status]}
-                  </span>
-                  <span className="text-xs font-medium text-primary">
-                    {labels.app.dashboard.inspectCta}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {projects.length === 0 ? (
+          <p className="mt-3 rounded-md border border-divider bg-content1 px-4 py-6 text-sm text-foreground/60">
+            {labels.app.dashboard.emptyProjects}
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {projects.map((project) => (
+              <li key={project.id}>
+                <Link
+                  href={`/project/${project.id}`}
+                  className="flex flex-col gap-2 rounded-md border border-divider bg-content1 px-4 py-3 transition-colors hover:bg-content2 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
+                    <p className="mt-1 text-xs text-foreground/60">
+                      {labels.app.dashboard.statusHeading}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses[project.status]}`}
+                    >
+                      {labels.app.dashboard.statuses[project.status]}
+                    </span>
+                    <span className="text-xs font-medium text-primary">
+                      {labels.app.dashboard.inspectCta}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

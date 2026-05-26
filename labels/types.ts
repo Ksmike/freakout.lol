@@ -64,6 +64,7 @@ export type AppLabels = {
       description: string;
       projectsHeading: string;
       createProjectCta: string;
+      emptyProjects: string;
       statusHeading: string;
       inspectCta: string;
       statuses: {

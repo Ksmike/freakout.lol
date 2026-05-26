@@ -228,6 +228,7 @@ vi.mock("@/labels", () => ({
           description: "Welcome back.",
           projectsHeading: "Projects",
           createProjectCta: "Create project",
+          emptyProjects: "No projects yet. Create a project to begin your investigation.",
           statusHeading: "Status",
           inspectCta: "Inspect",
           statuses: {
@@ -516,7 +517,7 @@ describe("DashboardPage", () => {
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
-  it("redirects to project creation when user has no projects", async () => {
+  it("renders a create-project empty state when user has no projects", async () => {
     mockAuth.mockResolvedValue({
       user: { id: "user-1", locale: "en" },
     });
@@ -526,7 +527,16 @@ describe("DashboardPage", () => {
       "@/app/(app)/dashboard/page"
     );
 
-    await expect(DashboardPage()).rejects.toThrow("REDIRECT:/projects/new");
+    const element = await DashboardPage();
+    render(element);
+
+    expect(
+      screen.getByText("No projects yet. Create a project to begin your investigation.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Create project" })
+    ).toHaveAttribute("href", "/projects/new");
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });
 
