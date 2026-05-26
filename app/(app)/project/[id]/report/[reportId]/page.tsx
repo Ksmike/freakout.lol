@@ -6,7 +6,7 @@ import { ReportDetailView } from "./ReportDetailView";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "Report Detail | KG Qualify",
+  title: "Report Detail | Freakout.lol",
 };
 
 type ReportDetailPageProps = {

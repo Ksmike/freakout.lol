@@ -181,13 +181,13 @@ vi.mock("@/labels", () => ({
     labels: {
       marketing: {
         hero: {
-          badge: "Technology for Compliance",
-          title: "Evidence-backed knowledge graphs for compliance workflows.",
+          badge: "Open Source",
+          title: "Knowledge-graph led data annotation and investigation.",
           description:
-            "SOC 2, ISO 27001, GDPR, and diligence workflows made easier...",
-          trialCta: "Start Free Trial",
-          demoCta: "View Live Workspace",
-          segmentLabels: ["SOC 2", "GDPR"],
+            "Define ontologies, upload documents, and let the platform annotate...",
+          trialCta: "Get Started",
+          demoCta: "See It in Action",
+          segmentLabels: ["Due Diligence", "Research"],
         },
         metrics: [
           { label: "Deals screened per month", value: "240+" },
@@ -195,7 +195,7 @@ vi.mock("@/labels", () => ({
           { label: "Manual analyst effort reduced", value: "92%" },
         ],
         workflow: {
-          heading: "How KG Qualify works",
+          heading: "How Freakout works",
           steps: [
             { title: "Collect", description: "Connect data rooms..." },
             { title: "Analyze", description: "Run automated checks..." },
@@ -207,7 +207,7 @@ vi.mock("@/labels", () => ({
           description: "Built for pre-investment...",
           items: ["Corporate and contract compliance"],
           outcomesTitle: "Pilot portfolio outcomes",
-          outcomesParagraphs: ["Teams using KG Qualify..."],
+          outcomesParagraphs: ["Teams using Freakout..."],
         },
         taxonomy: {
           heading: "Built-in deal labels",
@@ -675,7 +675,7 @@ describe("RegisterPage", () => {
       screen.getByRole("heading", { name: "Create an account" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Get started with KG Qualify")
+      screen.getByText("Get started with Freakout")
     ).toBeInTheDocument();
     expect(screen.getByTestId("register-form")).toBeInTheDocument();
   });
@@ -700,7 +700,7 @@ describe("HomePage", () => {
     render(<HomePage />);
     expect(
       screen.getByRole("heading", {
-        name: /Evidence-backed knowledge graphs for compliance workflows/i,
+        name: /Knowledge-graph led data annotation and investigation/i,
       })
     ).toBeInTheDocument();
   });
@@ -717,7 +717,7 @@ describe("HomePage", () => {
     const { default: HomePage } = await import("@/app/(marketing)/page");
     render(<HomePage />);
     expect(
-      screen.getByRole("heading", { name: "How KG Qualify works" })
+      screen.getByRole("heading", { name: "How Freakout works" })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Collect" })

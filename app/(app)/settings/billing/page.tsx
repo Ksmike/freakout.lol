@@ -21,7 +21,7 @@ import { getLabelsForLocale } from "@/labels";
 import type { AppLabels } from "@/labels/types";
 
 export const metadata = {
-  title: "Billing | KG Qualify",
+  title: "Billing | Freakout.lol",
 };
 
 type BillingSettingsPageProps = {

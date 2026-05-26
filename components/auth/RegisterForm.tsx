@@ -4,6 +4,7 @@ import { useState, useActionState } from "react";
 import { register } from "@/lib/actions/auth";
 import Link from "next/link";
 import { LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LinkedInButton } from "@/components/auth/LinkedInButton";
 
 type PasswordCriteria = {
   minLength: boolean;
@@ -49,6 +50,18 @@ export function RegisterForm({ inviteToken }: { inviteToken?: string | null }) {
   );
 
   return (
+    <div className="space-y-4">
+      <LinkedInButton label="Sign up with LinkedIn" />
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-divider" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-background px-2 text-foreground/50">or</span>
+        </div>
+      </div>
+
     <form action={formAction} className="space-y-4">
       {inviteToken && (
         <input type="hidden" name="inviteToken" value={inviteToken} />
@@ -199,5 +212,6 @@ export function RegisterForm({ inviteToken }: { inviteToken?: string | null }) {
         </Link>
       </p>
     </form>
+    </div>
   );
 }

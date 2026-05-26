@@ -7,7 +7,7 @@ import { isPlatformAdmin } from "@/lib/authz/platform-admin";
 import { db } from "@/lib/db";
 
 export const metadata = {
-  title: "User | KG Qualify",
+  title: "User | Freakout.lol",
 };
 
 type Props = {

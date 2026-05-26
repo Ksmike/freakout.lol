@@ -1,7 +1,7 @@
 import { RegisterForm } from "@/components/auth/RegisterForm";
 
 export const metadata = {
-  title: "Register | KG Qualify",
+  title: "Register | Freakout.lol",
 };
 
 type RegisterPageProps = {
@@ -22,7 +22,7 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           <p className="mt-1 text-sm text-foreground/60">
             {inviteToken
               ? "Complete your registration to accept the invitation."
-              : "Get started with KG Qualify"}
+              : "Get started with Freakout"}
           </p>
         </div>
         <RegisterForm inviteToken={inviteToken} />

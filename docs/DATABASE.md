@@ -18,55 +18,66 @@ From `prisma/models/user.prisma` and `prisma/models/auth.prisma`:
 - `Account`
 - `Session`
 - `VerificationToken`
-
-Purpose:
-- Application identity and login/session state for Auth.js.
+- enum `SystemRole` (`ADMIN`, `USER`)
 
 Key points:
 - `User.email` is unique.
 - `User.password` is nullable to support OAuth-only users.
 - `User.locale` defaults to `"en"`.
+- `User.systemRole` controls platform-level admin access.
+- `User.notificationPreferences` stores opt-in preferences as JSON.
 - `Account` enforces `@@unique([provider, providerAccountId])`.
 - `Session.sessionToken` is unique.
 - `VerificationToken` enforces `@@unique([identifier, token])`.
 
-### 2) Project Workspace
+### 2) Firms + Memberships
+
+From `prisma/models/firm.prisma`:
+
+- `Firm`
+- `FirmMembership`
+- `FirmInvitation`
+- enums `FirmRole`, `FirmMembershipStatus`
+
+Key points:
+- `Firm` is the primary tenant boundary. All billing, projects, and access are scoped to a firm.
+- `Firm.slug` is unique (used in URLs).
+- `FirmMembership` enforces `@@unique([firmId, userId])`.
+- Roles: `OWNER`, `ADMIN`, `PARTNER`, `ANALYST`, `REVIEWER`, `VIEWER`.
+- `FirmInvitation` supports inviting users by email before they register. Token-based acceptance.
+- Cascade delete removes memberships and invitations when a firm is deleted.
+
+### 3) Project Workspace
 
 From `prisma/models/project.prisma` and `prisma/models/project-document.prisma`:
 
 - `Project`
 - `ProjectDocument`
-- enum `ProjectStatus`
-- enum `ProjectDocumentProcessingStatus`
-
-Purpose:
-- Represents a diligence workspace (`Project`) and uploaded source files (`ProjectDocument`).
+- `ProjectMembership`
+- enums `ProjectStatus`, `ProjectDocumentProcessingStatus`
 
 Key points:
-- `Project` belongs to one `User`.
+- `Project` belongs to one `User` and one `Firm`.
 - `Project.status` is one of `DRAFT`, `IN_PROGRESS`, `REVIEWED`, `COMPLETE`, `REJECTED`.
-- `Project` has direct relations to all diligence output tables, not just jobs and documents.
+- `ProjectMembership` provides optional ring-fencing — when present, only listed members can access the project.
 - `ProjectDocument` stores file metadata/pathname and processing state.
 - `ProjectDocument.processingStatus` is one of `QUEUED`, `PROCESSING`, `PROCESSED`, `FAILED`.
 - Cascade delete removes project children when a project is deleted.
-- `ProjectDocument` enforces `@@unique([projectId, pathname])` to avoid duplicate paths within a project.
+- `ProjectDocument` enforces `@@unique([projectId, pathname])`.
 
-### 3) API Key Management
+### 4) API Key Management
 
 From `prisma/models/api-key.prisma`:
 
 - `UserApiKey`
 - enum `ApiKeyProvider` (`OPENAI`, `ANTHROPIC`, `GOOGLE`)
 
-Purpose:
-- Encrypted per-user model credentials and provider defaults.
-
 Key points:
 - One key per provider per user via `@@unique([userId, provider])`.
 - `enabled` allows a key to be disabled without deletion.
 - Validation state is captured with `lastValidatedAt` and `validationError`.
 
-### 4) Diligence Execution and Outputs
+### 5) Diligence Execution and Outputs
 
 From `prisma/models/diligence.prisma`:
 
@@ -91,98 +102,120 @@ From `prisma/models/diligence.prisma`:
   - `DiligenceDocumentClassification`
   - enum `DiligenceCoreQuestion`
 
-Purpose:
-- Tracks staged pipeline progress and persists all generated diligence intelligence.
-
 Key points:
 - `DiligenceJob` stores provider/model selection, fallback providers, workflow run ID, token usage, and estimated cost.
-- `DiligenceStageName` currently includes:
-  - `DOCUMENT_EXTRACTION`
-  - `DOCUMENT_CLASSIFICATION`
-  - `EVIDENCE_INDEXING`
-  - `ENTITY_EXTRACTION`
-  - `CLAIM_EXTRACTION`
-  - `CORROBORATION`
-  - `Q1_IDENTITY_AND_OWNERSHIP`
-  - `Q2_PRODUCT_AND_TECHNOLOGY`
-  - `Q3_MARKET_AND_TRACTION`
-  - `Q4_EXECUTION_CAPABILITY`
-  - `Q5_BUSINESS_MODEL_VIABILITY`
-  - `Q6_RISK_ANALYSIS`
-  - `Q7_EVIDENCE_QUALITY`
-  - `Q8_FAILURE_MODES_AND_FRAGILITY`
-  - `OPEN_QUESTIONS`
-  - `EXECUTIVE_SUMMARY`
-  - `FINAL_REPORT`
 - `DiligenceArtifact` supports multiple storage backends and artifact types including `OCR_OUTPUT`, `MODEL_TRACE`, `EVIDENCE_MAP`, and `EXPORT_BUNDLE`.
 - `DiligenceQuestionAnswer` enforces `@@unique([jobId, question])`.
 - `DiligenceDocumentClassification` enforces `@@unique([jobId, documentPathname])`.
+
+### 6) Knowledge Graph Definitions
+
+From `prisma/models/graph.prisma`:
+
+- `KnowledgeGraphDefinition`
+- `OntologyNode`
+- `OntologyEdge`
+- `FirmGraphEnablement`
+- `AssistanceGoal`
+- `EvidenceRequirement`
+- `EvidenceMapping`
+- `OutputTemplate`
+- enums `GraphDefinitionStatus`, `OntologyNodeKind`, `OntologyEdgeKind`, `EvidenceRequirementStatus`, `OutputTemplateKind`
+
+Key points:
+- `KnowledgeGraphDefinition` is platform-level and versioned. Slug is unique.
+- `OntologyNode` kinds: `ENTITY`, `CONTROL`, `EVIDENCE_TYPE`, `QUESTION`, `OUTPUT_SECTION`, `RISK_CATEGORY`.
+- `OntologyEdge` kinds: `REQUIRES`, `SATISFIES`, `CONTRADICTS`, `MAPS_TO`, `ESCALATES_TO`, `PART_OF`.
+- `FirmGraphEnablement` links a firm to a published graph (`@@unique([firmId, graphId])`).
+- `AssistanceGoal` binds a project to a graph (`projectId` is unique — one goal per project).
+- `EvidenceRequirement` defines what each graph node needs to be satisfied.
+- `EvidenceMapping` tracks per-project evidence status against requirements (`@@unique([projectId, requirementId])`).
+- `OutputTemplate` defines report/questionnaire schemas per graph.
+
+### 7) Billing + Entitlements
+
+From `prisma/models/billing.prisma`:
+
+- `BillingCustomer`
+- `Subscription`
+- `PlanEntitlement`
+- `UsageMeter`
+- `InvoiceEvent`
+- enums `SubscriptionStatus`, `BillingInterval`
+
+Key points:
+- `BillingCustomer` is 1:1 with `Firm` (unique `firmId` and `stripeCustomerId`).
+- `Subscription` tracks Stripe subscription state, period, and cancellation.
+- `PlanEntitlement` defines per-firm limits (seats, projects, uploads, runs, exports).
+- `UsageMeter` tracks rolling monthly usage counters, reset each billing period.
+- `InvoiceEvent` is an immutable log of Stripe webhook events (idempotent via `stripeEventId`).
+
+### 8) Audit Logs
+
+From `prisma/models/audit.prisma`:
+
+- `AuditLog`
+- enum `AuditAction`
+
+Key points:
+- Scoped to `firmId` with optional `projectId`.
+- `actorUserId` records who performed the action.
+- Actions cover: membership, billing, project lifecycle, documents, workflows, exports, graph enablement.
+- Indexed by `[firmId, createdAt]`, `[actorUserId, createdAt]`, `[projectId, createdAt]`, `[action, createdAt]`.
 
 ## Entity Relationship Overview
 
 ```mermaid
 erDiagram
-  User ||--o{ Project : owns
-  User ||--o{ UserApiKey : configures
-  User ||--o{ ProjectDocument : uploads
-  User ||--o{ DiligenceJob : runs
+  User ||--o{ FirmMembership : "belongs to firms"
+  Firm ||--o{ FirmMembership : "has members"
+  Firm ||--o{ Project : "owns"
+  Firm ||--o{ AuditLog : "tracks"
+  Firm ||--|| BillingCustomer : "billed via"
+  Firm ||--o| PlanEntitlement : "limited by"
+  Firm ||--o| UsageMeter : "metered"
+  Firm ||--o{ FirmGraphEnablement : "enables graphs"
 
-  Project ||--o{ ProjectDocument : contains
-  Project ||--o{ DiligenceJob : executes
+  User ||--o{ Project : "creates"
+  User ||--o{ UserApiKey : "configures"
+  User ||--o{ DiligenceJob : "runs"
 
-  DiligenceJob ||--o{ DiligenceStageRun : tracks
-  DiligenceJob ||--o{ DiligenceArtifact : emits
-  DiligenceJob ||--o{ DiligenceChunk : indexes
-  DiligenceJob ||--o{ DiligenceEntity : extracts
-  DiligenceJob ||--o{ DiligenceClaim : extracts
-  DiligenceJob ||--o{ DiligenceFinding : identifies
-  DiligenceJob ||--o{ DiligenceContradiction : detects
-  DiligenceJob ||--o{ DiligenceQuestionAnswer : answers
-  DiligenceJob ||--o{ DiligenceEvidenceGap : records
-  DiligenceJob ||--o{ DiligenceOpenQuestion : proposes
-  DiligenceJob ||--o{ DiligenceDocumentClassification : classifies
+  Project ||--o{ ProjectDocument : "contains"
+  Project ||--o{ DiligenceJob : "executes"
+  Project ||--o| AssistanceGoal : "bound to graph"
+  Project ||--o{ EvidenceMapping : "maps evidence"
+  Project ||--o{ ProjectMembership : "ring-fenced by"
 
-  UserApiKey ||--o{ DiligenceJob : selected_for
+  KnowledgeGraphDefinition ||--o{ OntologyNode : "defines"
+  KnowledgeGraphDefinition ||--o{ OntologyEdge : "connects"
+  KnowledgeGraphDefinition ||--o{ EvidenceRequirement : "requires"
+  KnowledgeGraphDefinition ||--o{ OutputTemplate : "outputs"
+  KnowledgeGraphDefinition ||--o{ FirmGraphEnablement : "enabled for"
+  KnowledgeGraphDefinition ||--o{ AssistanceGoal : "used by"
+
+  DiligenceJob ||--o{ DiligenceStageRun : "tracks"
+  DiligenceJob ||--o{ DiligenceArtifact : "emits"
+  DiligenceJob ||--o{ DiligenceChunk : "indexes"
+  DiligenceJob ||--o{ DiligenceEntity : "extracts"
+  DiligenceJob ||--o{ DiligenceClaim : "extracts"
+  DiligenceJob ||--o{ DiligenceFinding : "identifies"
+  DiligenceJob ||--o{ DiligenceContradiction : "detects"
+  DiligenceJob ||--o{ DiligenceQuestionAnswer : "answers"
+  DiligenceJob ||--o{ DiligenceEvidenceGap : "records"
+  DiligenceJob ||--o{ DiligenceOpenQuestion : "proposes"
+  DiligenceJob ||--o{ DiligenceDocumentClassification : "classifies"
+
+  BillingCustomer ||--o| Subscription : "subscribes"
 ```
-
-## Indexing and Query Patterns
-
-Important index patterns in current schema:
-
-- Core ownership / scoping:
-  - `Project @@index([userId])`
-  - `ProjectDocument @@index([userId, projectId])`
-  - `UserApiKey @@index([userId])`
-- Job retrieval and queueing:
-  - `DiligenceJob @@index([projectId, createdAt])`
-  - `DiligenceJob @@index([userId, createdAt])`
-  - `DiligenceJob @@index([status])`
-  - `DiligenceJob @@index([status, priority])`
-  - `DiligenceJob @@index([workflowRunId])`
-- Stage run lookups:
-  - `DiligenceStageRun @@unique([jobId, stage])`
-  - `DiligenceStageRun @@index([jobId, status])`
-- Document processing:
-  - `ProjectDocument @@index([projectId, processingStatus])`
-- Project-oriented analysis reads:
-  - model-level indexes on `projectId`, `jobId`, and status/type fields across chunks, entities, claims, findings, contradictions, answers, evidence gaps, open questions, and classifications.
-
-These support:
-- "latest job for project"
-- "stage-by-stage progress"
-- "latest completed outputs for project"
-- "user-scoped project and evidence reads"
-- "document processing queues by project"
-- "resume workflow execution by `workflowRunId`"
 
 ## Design Decisions
 
-- `userId` is duplicated across child diligence tables intentionally:
-  - allows direct row-level filtering by user without mandatory joins through `Project`/`DiligenceJob`.
-- JSON fields are used for opaque structured outputs and references:
-  - `metadata`, `chunkRefs`, `evidenceRefs`, `structured`, `outputJson`, `topicsCovered`, `contradictions`, `fallbackProviders`.
+- `userId` is duplicated across child diligence tables intentionally — allows direct row-level filtering by user without mandatory joins through `Project`/`DiligenceJob`.
+- `firmId` on `Project` and `EvidenceMapping` enables firm-scoped queries without joining through user memberships.
+- JSON fields are used for opaque structured outputs and references: `metadata`, `chunkRefs`, `evidenceRefs`, `structured`, `outputJson`, `topicsCovered`, `contradictions`, `fallbackProviders`.
 - Heavy text (`DiligenceChunk.text`) and outputs are stored in DB for deterministic replay and enquiry grounding.
 - Per-job uniqueness constraints keep stage outputs, question answers, and document classifications deterministic.
+- `InvoiceEvent.stripeEventId` provides idempotency for webhook processing.
 
 ## Migration / Generate Commands
 

@@ -19,7 +19,7 @@ describe("RootLayout", () => {
 
   it("exports metadata with title and description", async () => {
     const { metadata } = await import("@/app/layout");
-    expect((metadata.title as string)).toContain("KG Qualify");
-    expect(metadata.description).toContain("KG Qualify");
+    expect((metadata.title as string)).toContain("Freakout.lol");
+    expect(metadata.description).toContain("Freakout");
   });
 });

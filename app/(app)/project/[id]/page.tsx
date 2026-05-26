@@ -11,7 +11,7 @@ import { DiligenceJobModel } from "@/lib/models/DiligenceJobModel";
 import { getProjectGoalWithRequirements, getProjectGaps, getProjectMappings } from "@/lib/actions/graph";
 
 export const metadata = {
-  title: "Project | KG Qualify",
+  title: "Project | Freakout.lol",
 };
 
 type ProjectInspectPageProps = {

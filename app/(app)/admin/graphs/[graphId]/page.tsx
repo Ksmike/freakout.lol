@@ -12,7 +12,7 @@ import { GraphCanvas } from "./GraphCanvas";
 import { isPlatformAdmin } from "@/lib/authz/platform-admin";
 
 export const metadata = {
-  title: "Graph Studio | KG Qualify",
+  title: "Graph Studio | Freakout.lol",
 };
 
 type Props = {

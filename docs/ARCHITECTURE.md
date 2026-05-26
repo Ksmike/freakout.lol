@@ -1,6 +1,6 @@
 ## Purpose
 
-This document explains how `KG Qualify` is structured end-to-end, from user actions in the UI to persistence and LLM-backed diligence outputs.
+This document explains how `Freakout.lol` is structured end-to-end, from user actions in the UI to persistence and LLM-backed diligence outputs.
 
 ## High-Level System
 
@@ -11,6 +11,8 @@ flowchart LR
   SA --> DB["Postgres via Prisma 7"]
   SA --> BLOB["Vercel Blob (source files)"]
   SA --> WF["Workflow Engine"]
+  SA --> STRIPE["Stripe (billing)"]
+  SA --> EMAIL["Resend (email)"]
   WF --> LLM["LLM Providers (OpenAI / Anthropic / Google)"]
   WF --> DB
   WF --> BLOB
@@ -21,19 +23,38 @@ flowchart LR
 
 - `app/`: Next.js App Router pages and route handlers.
 - `components/`: shared UI components.
-- `lib/actions/`: server actions for project lifecycle, diligence execution, settings, and enquiries.
+- `lib/actions/`: server actions for project lifecycle, diligence execution, settings, billing, firm management, and enquiries.
 - `lib/diligence/`: staged diligence workflow, extraction, prompt plans, provider routing, corroboration logic.
 - `lib/models/`: database access layer over Prisma models.
+- `lib/authz/`: permission and role-based access control helpers.
+- `lib/emails/`: email templates (React-based).
 - `prisma/models/`: multi-file Prisma schema.
 - `labels/`: typed localization labels used by UI routes/components.
+
+## Multi-Tenancy
+
+The platform is multi-tenant with **Firm** as the primary tenant boundary:
+
+- Each user belongs to one or more firms via `FirmMembership`.
+- Firm roles: `OWNER`, `ADMIN`, `PARTNER`, `ANALYST`, `REVIEWER`, `VIEWER`.
+- Projects are scoped to a firm. Access is controlled by firm membership and optional `ProjectMembership` ring-fencing.
+- Billing, entitlements, and usage metering are per-firm.
+- Audit logs are scoped to a firm.
+
+## Authentication
+
+- Auth.js v5 with JWT session strategy.
+- Providers: credentials (email + password) and LinkedIn OAuth.
+- Config split: `lib/auth.config.ts` (Edge-safe, used by middleware) and `lib/auth.ts` (Node.js, full authorize logic + adapter).
+- `User.systemRole` (`ADMIN` | `USER`) controls platform-level admin access.
 
 ## Main User Journeys
 
 ### 1) Project + document ingestion
 
 - Project creation route: `app/(app)/projects/new/page.tsx`.
-- Document APIs:  
-  - `app/api/projects/[projectId]/documents/route.ts`  
+- Document APIs:
+  - `app/api/projects/[projectId]/documents/route.ts`
   - `app/api/projects/[projectId]/documents/[...documentPath]/route.ts`
 - Document storage model sync: `lib/models/ProjectDocumentModel.ts`.
 
@@ -48,8 +69,25 @@ flowchart LR
 
 - Insights page: `app/(app)/project/[id]/insights`.
 - Report listing and detail: `app/(app)/project/[id]/report`.
+- Output draft (graph-backed): `app/(app)/project/[id]/draft`.
 - Enquiries chat experience: `app/(app)/project/[id]/enquiries`.
 - Enquiry answer generation (grounded context + citations): `lib/actions/enquiries.ts`.
+
+### 4) Knowledge graph management (platform admin)
+
+- Graph Studio: `app/(app)/admin/graphs`.
+- Create/edit graph definitions with nodes, edges, evidence requirements, and output templates.
+- Firm admins enable graphs for their firm via `FirmGraphEnablement`.
+- Projects bind to a graph via `AssistanceGoal`.
+- Evidence mapping tracks which pipeline outputs satisfy which graph requirements.
+
+### 5) Billing
+
+- Stripe integration for subscriptions and payments.
+- `BillingCustomer` → `Subscription` → `PlanEntitlement` per firm.
+- `UsageMeter` tracks rolling monthly usage (uploads, runs, exports).
+- `InvoiceEvent` stores immutable Stripe webhook events.
+- Webhook handler: `app/api/webhooks/stripe/route.ts`.
 
 ## Diligence Pipeline Stages
 
@@ -115,13 +153,14 @@ sequenceDiagram
 
 ## Security and Access Patterns
 
-- Every project-scoped query filters by `userId`.
+- Every project-scoped query filters by `userId` and `firmId`.
 - Child diligence tables intentionally include `userId` for direct row-level filtering without joins.
+- Firm membership and role checks gate access to firm resources.
 - Auth session is JWT-based via Auth.js (`lib/auth.ts`, `lib/auth.config.ts`).
 - Uploaded source docs are private objects in Vercel Blob and accessed through authenticated route handlers.
+- Audit logs record membership changes, billing events, and key workflow actions.
 
-## Notes for Extension
+## Observability
 
-- Add OCR support for scanned PDFs in `lib/diligence/document-extractors.ts`.
-- Add artifact materialization for `EVIDENCE_MAP` / `EXPORT_BUNDLE` types (currently report artifacts are generated).
-- Extend enquiries retrieval/ranking strategies in `lib/actions/enquiries.ts`.
+- Error monitoring: Sentry v10 (client + server).
+- Audit trail: `AuditLog` model with firm/project/actor scoping and action enum.

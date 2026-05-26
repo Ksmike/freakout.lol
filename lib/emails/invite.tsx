@@ -25,7 +25,7 @@ export function InviteEmail({
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>You've been invited to {firmName} on KG Qualify</title>
+        <title>You've been invited to {firmName} on Freakout.lol</title>
       </head>
       <body
         style={{
@@ -54,7 +54,7 @@ export function InviteEmail({
               margin: "0 0 32px",
             }}
           >
-            KG Qualify
+            Freakout
           </p>
 
           <h1
@@ -72,7 +72,7 @@ export function InviteEmail({
           <p style={{ fontSize: 15, color: "#6b7280", margin: "0 0 8px" }}>
             <strong style={{ color: "#374151" }}>{inviterName}</strong> has
             invited you to join <strong style={{ color: "#374151" }}>{firmName}</strong>{" "}
-            on KG Qualify as a{" "}
+            on Freakout.lol as a{" "}
             <strong style={{ color: "#374151" }}>{role.toLowerCase()}</strong>.
           </p>
 
@@ -138,7 +138,7 @@ export function inviteEmailText({
   expiresInDays,
 }: InviteEmailProps): string {
   return [
-    `You've been invited to join ${firmName} on KG Qualify`,
+    `You've been invited to join ${firmName} on Freakout.lol`,
     "",
     `${inviterName} has invited you to join ${firmName} as a ${role.toLowerCase()}.`,
     `This invitation expires in ${expiresInDays} day${expiresInDays !== 1 ? "s" : ""}.`,

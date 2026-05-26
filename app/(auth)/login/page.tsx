@@ -1,7 +1,7 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const metadata = {
-  title: "Login | KG Qualify",
+  title: "Login | Freakout.lol",
 };
 
 export default function LoginPage() {

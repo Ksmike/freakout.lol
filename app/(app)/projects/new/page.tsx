@@ -5,7 +5,7 @@ import { listEnabledGraphs } from "@/lib/actions/graph";
 import { LuNetwork, LuTriangleAlert } from "react-icons/lu";
 
 export const metadata = {
-  title: "Create Project | KG Qualify",
+  title: "Create Project | Freakout.lol",
 };
 
 export default async function ProjectCreationPage({

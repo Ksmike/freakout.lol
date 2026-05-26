@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "KG Qualify | Evidence-Backed Knowledge Graphs for Compliance",
+  title: "Freakout.lol | Open-Source Knowledge-Graph Led Data Annotation & Investigation",
   description:
-    "KG Qualify makes SOC 2, ISO 27001, GDPR, and diligence workflows easier with document mapping, gap detection, and source-backed outputs.",
+    "Freakout is an open-source platform for knowledge-graph led data annotation and investigation. Define ontologies, upload documents, and generate structured insights.",
 };
 
 // Runs synchronously before React hydrates — prevents flash of wrong theme.
@@ -38,7 +38,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full flex flex-col overflow-x-hidden w-full">
+      <body className="min-h-full flex flex-col overflow-x-hidden w-full" suppressHydrationWarning>
         <RootProviders>{children}</RootProviders>
       </body>
     </html>

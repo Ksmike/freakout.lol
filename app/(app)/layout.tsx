@@ -37,7 +37,7 @@ export default async function AppLayout({
             adminLabel={labels.app.admin.sidebarCta}
           />
           <span className="text-sm font-semibold text-foreground">
-            KG Qualify
+            .lol
           </span>
         </header>
 

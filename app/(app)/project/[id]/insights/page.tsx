@@ -8,7 +8,7 @@ import { RestrictedInsightsView } from "./RestrictedInsightsView";
 import { checkSubscriptionAccess } from "@/lib/authz/subscription-gate";
 
 export const metadata = {
-  title: "Insights | KG Qualify",
+  title: "Insights | Freakout.lol",
 };
 
 type InsightsPageProps = {

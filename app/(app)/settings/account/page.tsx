@@ -19,7 +19,7 @@ import { getLabelsForLocale } from "@/labels";
 import { FirmRole } from "@/lib/generated/prisma/client";
 
 export const metadata = {
-  title: "Account & Firm | KG Qualify",
+  title: "Account & Firm | Freakout.lol",
 };
 
 const MANAGEABLE_ROLES = [

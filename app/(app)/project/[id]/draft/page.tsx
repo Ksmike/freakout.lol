@@ -8,7 +8,7 @@ import { checkSubscriptionAccess } from "@/lib/authz/subscription-gate";
 import { PaywallOverlay } from "@/components/PaywallOverlay";
 
 export const metadata = {
-  title: "Output Draft | KG Qualify",
+  title: "Output Draft | Freakout.lol",
 };
 
 type DraftPageProps = {

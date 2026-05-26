@@ -194,7 +194,7 @@ export async function addFirmMemberByEmail(
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: email,
-      subject: `You've been invited to join ${firm.name} on KG Qualify`,
+      subject: `You've been invited to join ${firm.name} on Freakout`,
       html,
       text: inviteEmailText({
         firmName: firm.name,

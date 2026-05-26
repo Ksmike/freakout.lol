@@ -11,7 +11,7 @@ vi.mock("@/components/UserMenu", () => ({
 describe("Header", () => {
   it("renders the brand link", () => {
     render(<Header />);
-    const brandLink = screen.getByRole("link", { name: "KG Qualify" });
+    const brandLink = screen.getByRole("link", { name: ".lol." });
     expect(brandLink).toBeInTheDocument();
     expect(brandLink).toHaveAttribute("href", "/");
   });

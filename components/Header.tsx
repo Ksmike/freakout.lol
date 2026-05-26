@@ -15,7 +15,7 @@ export function Header({ user }: { user?: HeaderUser }) {
         href="/"
         className="text-base font-semibold text-foreground sm:text-lg"
       >
-        KG Qualify
+        .lol.
       </Link>
       <nav className="flex items-center gap-1 sm:gap-2">
         <Link

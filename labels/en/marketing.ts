@@ -2,70 +2,70 @@ import type { MarketingLabels } from "@/labels/types";
 
 export const marketingLabels: MarketingLabels = {
   hero: {
-    badge: "Technology for Compliance",
-    title: "Evidence-backed knowledge graphs for compliance workflows.",
+    badge: "Open Source",
+    title: "Knowledge-graph led data annotation and investigation.",
     description:
-      "SOC 2, ISO 27001, GDPR, and diligence workflows made easier with document mapping, gap detection, and source-backed outputs.",
-    trialCta: "Start Free Trial",
+      "Define ontologies, upload documents, and let the platform annotate, cross-reference, and surface what matters — with full provenance.",
+    trialCta: "Get Started",
     demoCta: "See It in Action",
     segmentLabels: [
-      "SOC 2",
-      "ISO 27001",
-      "GDPR",
+      "Due Diligence",
+      "Compliance",
+      "Research",
       "Vendor Review",
-      "CDD",
-      "PE Diligence",
+      "Risk Analysis",
+      "Investigations",
     ],
   },
   metrics: [
-    { label: "Evidence sources mapped per workflow", value: "12+" },
-    { label: "Controls and claims structured automatically", value: "1,000+" },
+    { label: "Documents annotated per project", value: "100+" },
+    { label: "Claims and entities extracted automatically", value: "1,000+" },
     { label: "Outputs traceable to source evidence", value: "100%" },
   ],
   workflow: {
-    heading: "How KG Qualify works",
+    heading: "How Freakout works",
     steps: [
       {
-        title: "Choose",
+        title: "Define",
         description:
-          "Select a regulated workflow such as SOC 2, ISO 27001, GDPR, vendor review, or commercial diligence from an admin-approved knowledge graph.",
+          "Build a knowledge graph that describes what you need to know — nodes for concepts, edges for relationships, and evidence requirements for each.",
       },
       {
-        title: "Map",
+        title: "Annotate",
         description:
-          "Upload policies, contracts, reports, call notes, and data room files. Evidence is structured into the graph against required controls, claims, entities, and form fields.",
+          "Upload documents. The platform extracts entities, claims, and evidence, then maps them against your graph to show what's covered and what's missing.",
       },
       {
-        title: "Complete",
+        title: "Investigate",
         description:
-          "Gaps are surfaced, follow-up questions are generated, and forms, reports, and review packs are drafted with provenance back to every source document.",
+          "Surface contradictions, gaps, and open questions. Generate structured outputs with full provenance back to every source document.",
       },
     ],
   },
   coverage: {
-    heading: "Knowledge workflows your firm can trust",
+    heading: "Structured investigation you can trust",
     description:
-      "Built for regulated workflows where teams need to prove what they know, where it came from, and what is still missing.",
+      "Built for workflows where you need to prove what you know, where it came from, and what is still missing.",
     items: [
-      "Industry-specific knowledge graphs nominated by admins",
+      "Custom knowledge graphs defined by your team",
       "Evidence requirements mapped to source documents",
-      "Gap detection across controls, forms, and diligence questions",
+      "Gap detection across your entire ontology",
       "Human review before conclusions or submissions",
-      "Firm-scoped workspaces for multiple teams and engagements",
+      "Multi-tenant workspaces for teams and engagements",
       "Every output linked back to source evidence",
     ],
-    outcomesTitle: "Workflow outcomes",
+    outcomesTitle: "Why knowledge graphs?",
     outcomesParagraphs: [
-      "Regulated teams spend too much time manually translating scattered documents into questionnaires, control evidence, diligence packs, and review notes. The hard part is not just extraction; it is knowing which evidence satisfies which requirement and what still needs to be gathered.",
-      "KG Qualify turns each workflow into a closed loop: nominate the graph, upload evidence, map what is known, ask for what is missing, and draft the output with a complete provenance trail.",
+      "Scattered documents are hard to reason about. The challenge isn't extraction — it's knowing which evidence satisfies which requirement and what still needs to be gathered.",
+      "Freakout turns each investigation into a closed loop: define the graph, upload evidence, annotate what is known, surface what is missing, and draft outputs with a complete provenance trail.",
     ],
   },
   taxonomy: {
-    heading: "Built-in workflow labels",
+    heading: "Built-in annotation labels",
     description:
-      "Standardised labels are attached to every workspace so teams can filter evidence, route reviewers, and keep regulated outputs consistent across engagements.",
+      "Standardised labels are attached to every workspace so teams can filter evidence, route reviewers, and keep outputs consistent across projects.",
     items: [
-      "Control Evidence",
+      "Evidence Mapped",
       "Requirement Gap",
       "Source Conflict",
       "Unverified Claim",
@@ -74,12 +74,12 @@ export const marketingLabels: MarketingLabels = {
     ],
   },
   cta: {
-    heading: "Ready to simplify your next compliance workflow?",
+    heading: "Ready to start your next investigation?",
     description:
-      "Launch a workspace in minutes, choose an assistance goal, upload your sources, and generate evidence-backed outputs for review.",
+      "Launch a workspace in minutes, define your graph, upload your sources, and generate annotated outputs for review.",
     createWorkspaceCta: "Create Workspace",
     contactSalesCta: "Get in Touch",
     footnote:
-      "Multi-tenant firms, role-based permissions, provenance, and auditability built into the roadmap.",
+      "Open source. Multi-tenant. Role-based permissions, provenance, and auditability built in.",
   },
 };

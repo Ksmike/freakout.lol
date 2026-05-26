@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
+import LinkedIn from "next-auth/providers/linkedin";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { authConfig } from "@/lib/auth.config";
@@ -49,9 +50,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
-    // Add more providers here as needed:
-    // Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
-    // GitHub({ clientId: process.env.GITHUB_CLIENT_ID!, clientSecret: process.env.GITHUB_CLIENT_SECRET! }),
+    LinkedIn({
+      clientId: process.env.AUTH_LINKEDIN_ID!,
+      clientSecret: process.env.AUTH_LINKEDIN_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {

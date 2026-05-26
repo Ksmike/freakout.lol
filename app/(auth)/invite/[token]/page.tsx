@@ -7,7 +7,7 @@ import Link from "next/link";
 import { LuCircleCheck, LuTriangleAlert } from "react-icons/lu";
 
 export const metadata = {
-  title: "Accept Invitation | KG Qualify",
+  title: "Accept Invitation | Freakout.lol",
 };
 
 type InvitePageProps = {
@@ -66,7 +66,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
             You&apos;re in
           </h1>
           <p className="mt-2 text-sm text-foreground/60">
-            You&apos;ve joined <strong className="text-foreground">{result.firmName}</strong> on KG Qualify.
+            You&apos;ve joined <strong className="text-foreground">{result.firmName}</strong> on Freakout.
           </p>
         </div>
         <Link

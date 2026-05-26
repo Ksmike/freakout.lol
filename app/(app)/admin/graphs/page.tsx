@@ -15,7 +15,7 @@ import {
 } from "react-icons/lu";
 
 export const metadata = {
-  title: "Graph Studio | KG Qualify",
+  title: "Graph Studio | Freakout.lol",
 };
 
 export default async function GraphStudioPage() {

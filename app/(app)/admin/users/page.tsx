@@ -8,7 +8,7 @@ import { getLabelsForLocale } from "@/labels";
 import { LuArrowRight, LuUsers } from "react-icons/lu";
 
 export const metadata = {
-  title: "User Management | KG Qualify",
+  title: "User Management | Freakout.lol",
 };
 
 export default async function AdminUsersPage() {

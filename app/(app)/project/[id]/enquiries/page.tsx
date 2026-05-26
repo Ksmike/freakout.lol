@@ -8,7 +8,7 @@ import { checkSubscriptionAccess } from "@/lib/authz/subscription-gate";
 import { PaywallOverlay } from "@/components/PaywallOverlay";
 
 export const metadata = {
-  title: "Enquiries | KG Qualify",
+  title: "Enquiries | Freakout.lol",
 };
 
 type EnquiriesPageProps = {

@@ -5,7 +5,7 @@ import { getApiKeyStatuses } from "@/lib/actions/apiKeys";
 import { getLabelsForLocale } from "@/labels";
 
 export const metadata = {
-  title: "API Keys | KG Qualify",
+  title: "API Keys | Freakout.lol",
 };
 
 export default async function ApiKeysSettingsPage() {

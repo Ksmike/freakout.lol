@@ -1,8 +1,8 @@
-# KG Qualify
+# Freakout.lol
 
-**KG Qualify** is a knowledge graph platform for document-driven workflows. You define an ontology — nodes, edges, evidence requirements, and output templates — and the platform maps uploaded documents against it, surfaces gaps, and generates source-backed outputs for human review.
+**Freakout** is an open-source platform for knowledge-graph led data annotation and investigation. You define an ontology — nodes, edges, evidence requirements, and output templates — and the platform annotates uploaded documents against it, surfaces gaps, and generates structured outputs with full provenance for human review.
 
-The built-in **Commercial Due Diligence** workflow is the reference implementation: it applies an 8-question knowledge graph to deal documents, extracts claims, entities, and risks, and produces structured reports and analyst enquiries. But the platform is workflow-agnostic — you can build graphs for SOC 2, ISO 27001, GDPR, vendor review, or any other evidence-gathering process.
+The built-in **Commercial Due Diligence** workflow is the reference implementation: it applies an 8-question knowledge graph to deal documents, extracts claims, entities, and risks, and produces structured reports and analyst enquiries. But the platform is workflow-agnostic — you can build graphs for any evidence-gathering or investigation process.
 
 ## Core Concepts
 
@@ -17,7 +17,7 @@ The built-in **Commercial Due Diligence** workflow is the reference implementati
 - UI: HeroUI + Tailwind CSS v4
 - Database: Postgres (Neon-compatible) with Row-Level Security
 - ORM: Prisma 7 (`prisma-client` generator, multi-file schema)
-- Auth: Auth.js v5 (credentials-based, JWT)
+- Auth: Auth.js v5 (credentials + LinkedIn OAuth, JWT)
 - Workflow Orchestration: `workflow` / `@workflow/next`
 - Storage: Vercel Blob
 - Graph Canvas: React Flow + Dagre (Graph Studio)
@@ -50,10 +50,7 @@ The canvas uses React Flow with Dagre auto-layout. Nodes are draggable; edges ca
 ## Documentation Index
 
 - Architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
-- Stage 3 Production Design: [`docs/STAGE3_PRODUCTION_ARCHITECTURE.md`](./docs/STAGE3_PRODUCTION_ARCHITECTURE.md)
-- Stage 3 Implementation Status: [`docs/STAGE3_IMPLEMENTATION_STATUS.md`](./docs/STAGE3_IMPLEMENTATION_STATUS.md)
 - Database Structure: [`docs/DATABASE.md`](./docs/DATABASE.md)
-- Next Steps: [`docs/NEXTSTEPS.md`](./docs/NEXTSTEPS.md)
 
 ## Getting Started
 
@@ -73,20 +70,21 @@ yarn dev:https
 
 Configure these in `.env` / `.env.local`:
 
-| Variable                      | Purpose                                                                                      |
-| ----------------------------- | -------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                | Pooled Postgres connection string                                                            |
-| `DIRECT_URL`                  | Direct Postgres connection string (migrations)                                               |
-| `AUTH_SECRET`                 | Auth.js secret                                                                               |
-| `AUTH_URL`                    | App URL (e.g. `https://localhost:3000`)                                                      |
-| `NEXT_PUBLIC_SENTRY_DSN`      | Sentry DSN for error monitoring                                                              |
-| `SENTRY_AUTH_TOKEN`           | Sentry auth token for source map uploads (CI only)                                           |
-| `RESEND_API_KEY`              | Resend API key for transactional email                                                       |
-| `STRIPE_SECRET_KEY`           | Stripe secret key                                                                            |
-| `STRIPE_WEBHOOK_SECRET`       | Stripe webhook signing secret                                                                |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID` | Default upgrade price ID                                                                     |
-| `BLOB_READ_WRITE_TOKEN`       | Vercel Blob read/write token                                                                 |
-| `PLATFORM_ADMIN_USER_IDS`     | Comma-separated user IDs with platform admin access (legacy — use `User.systemRole` instead) |
+| Variable                      | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `DATABASE_URL`                | Pooled Postgres connection string                  |
+| `DIRECT_URL`                  | Direct Postgres connection string (migrations)     |
+| `AUTH_SECRET`                 | Auth.js secret                                     |
+| `AUTH_URL`                    | App URL (e.g. `https://localhost:3000`)            |
+| `AUTH_LINKEDIN_ID`            | LinkedIn OAuth app client ID                       |
+| `AUTH_LINKEDIN_SECRET`        | LinkedIn OAuth app client secret                   |
+| `NEXT_PUBLIC_SENTRY_DSN`      | Sentry DSN for error monitoring                    |
+| `SENTRY_AUTH_TOKEN`           | Sentry auth token for source map uploads (CI only) |
+| `RESEND_API_KEY`              | Resend API key for transactional email             |
+| `STRIPE_SECRET_KEY`           | Stripe secret key                                  |
+| `STRIPE_WEBHOOK_SECRET`       | Stripe webhook signing secret                      |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID` | Default upgrade price ID                           |
+| `BLOB_READ_WRITE_TOKEN`       | Vercel Blob read/write token                       |
 
 ## Prisma Workflow
 

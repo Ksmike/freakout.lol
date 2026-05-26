@@ -7,7 +7,7 @@ export const enLabels: AppLabels = {
   docs: {
     heading: "Documentation",
     description:
-      "Architecture, database structure, delivery notes, and production planning for KG Qualify.",
+      "Architecture, database structure, delivery notes, and production planning for Freakout.",
     sidebarEyebrow: "Repo Docs",
     indexEyebrow: "Overview",
     indexHeading: "Project documentation",

@@ -149,6 +149,10 @@ export async function login(formData: FormData) {
   }
 }
 
+export async function oauthSignIn(provider: string) {
+  await signIn(provider, { redirectTo: "/dashboard" });
+}
+
 export async function logout() {
   await signOut({ redirectTo: "/" });
 }

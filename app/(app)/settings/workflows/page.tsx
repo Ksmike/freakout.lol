@@ -5,7 +5,7 @@ import { disableGraph, enableGraph, listAvailableGraphs } from "@/lib/actions/gr
 import { getLabelsForLocale } from "@/labels";
 
 export const metadata = {
-  title: "Workflows | KG Qualify",
+  title: "Workflows | Freakout.lol",
 };
 
 export default async function WorkflowSettingsPage() {

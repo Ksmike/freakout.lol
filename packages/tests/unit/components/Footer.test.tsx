@@ -12,7 +12,7 @@ describe("Footer", () => {
   it("renders the tagline", () => {
     render(<Footer />);
     expect(
-      screen.getByText("Evidence-backed knowledge workflows for regulated teams.")
+      screen.getByText("Open-source platform for knowledge-graph led data annotation and investigation.")
     ).toBeInTheDocument();
   });
 });
