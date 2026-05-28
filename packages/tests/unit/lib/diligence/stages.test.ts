@@ -34,6 +34,8 @@ vi.mock("@/lib/generated/prisma/client", () => ({
 
 const {
   DILIGENCE_STAGE_SEQUENCE,
+  GRAPH_NODE_SLUG_TO_QUESTION,
+  STAGE_TO_GRAPH_NODE_SLUG,
   STAGE_TO_QUESTION,
   getStageProgressPercent,
   getNextStage,
@@ -74,6 +76,30 @@ describe("STAGE_TO_QUESTION", () => {
   it("does not map substrate stages", () => {
     expect(STAGE_TO_QUESTION.DOCUMENT_EXTRACTION).toBeUndefined();
     expect(STAGE_TO_QUESTION.CORROBORATION).toBeUndefined();
+  });
+});
+
+describe("graph node question mappings", () => {
+  it("maps Q-stages to graph question node slugs", () => {
+    expect(STAGE_TO_GRAPH_NODE_SLUG.Q1_IDENTITY_AND_OWNERSHIP).toBe(
+      "identity-ownership"
+    );
+    expect(STAGE_TO_GRAPH_NODE_SLUG.Q5_BUSINESS_MODEL_VIABILITY).toBe(
+      "business-model-viability"
+    );
+    expect(STAGE_TO_GRAPH_NODE_SLUG.Q8_FAILURE_MODES_AND_FRAGILITY).toBe(
+      "failure-modes"
+    );
+  });
+
+  it("maps graph question node slugs back to core questions", () => {
+    expect(GRAPH_NODE_SLUG_TO_QUESTION["identity-ownership"]).toBe(
+      "Q1_IDENTITY"
+    );
+    expect(GRAPH_NODE_SLUG_TO_QUESTION["risk-analysis"]).toBe("Q6_RISKS");
+    expect(GRAPH_NODE_SLUG_TO_QUESTION["failure-modes"]).toBe(
+      "Q8_FAILURE_MODES"
+    );
   });
 });
 

@@ -98,6 +98,7 @@ export type AppLabels = {
       uploadStatusUploading: string;
       uploadStatusUploaded: string;
       uploadStatusFailed: string;
+      clearUploadCta: string;
       emptyDocuments: string;
       loadingDocuments: string;
       loadError: string;
@@ -179,6 +180,17 @@ export type AppLabels = {
       insightsClaimsHeading: string;
       insightsEntitiesHeading: string;
       insightsContradictionsHeading: string;
+      snapshotHistoryHeading: string;
+      snapshotHistoryDescription: string;
+      snapshotLabel: string;
+      currentSnapshotLabel: string;
+      lockedSnapshotLabel: string;
+      editableSnapshotLabel: string;
+      snapshotCompletedLabel: string;
+      snapshotFilesLabel: string;
+      snapshotOverviewLabel: string;
+      snapshotNoNewFiles: string;
+      activeSnapshotHint: string;
     };
     insights: {
       heading: string;
@@ -299,6 +311,50 @@ export type AppLabels = {
       apiKeysHeading: string;
       apiKeysDescription: string;
       encryptionNote: string;
+      apiKeyConnectors: {
+        providers: {
+          OPENAI: {
+            name: string;
+            description: string;
+            placeholder: string;
+          };
+          ANTHROPIC: {
+            name: string;
+            description: string;
+            placeholder: string;
+          };
+          GOOGLE: {
+            name: string;
+            description: string;
+            placeholder: string;
+          };
+          LOCAL: {
+            name: string;
+            description: string;
+            placeholder: string;
+          };
+        };
+        connectedStatus: string;
+        notConfiguredStatus: string;
+        updateCredentialTitle: string;
+        revokeCredentialTitle: string;
+        cancelTitle: string;
+        pasteNewCredentialPlaceholder: string;
+        localEndpointLabel: string;
+        localEndpointPlaceholder: string;
+        localApiKeyLabel: string;
+        localApiKeyPlaceholder: string;
+        localApiKeyHint: string;
+        localEndpointInvalid: string;
+        defaultModelLabel: string;
+        enabledLabel: string;
+        saveSettingsCta: string;
+        saveCta: string;
+        savingCta: string;
+        updateCta: string;
+        testConnectionCta: string;
+        testingConnectionCta: string;
+      };
       billingHeading: string;
       billingDescription: string;
       billingPlanLabel: string;

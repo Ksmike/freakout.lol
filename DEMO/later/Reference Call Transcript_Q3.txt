@@ -1,0 +1,66 @@
+# REFERENCE CALL TRANSCRIPT
+
+Candidate Company: NovaBridge Technologies  
+Reference: James Harrington, former CTO at Meridian Analytics  
+Date: 21 July 2026  
+Conducted by: Investment Team  
+
+---
+
+### Q: James, thanks again for taking the time. We spoke with you back in April about Priya and Meridian. At that point, you mentioned concerns around delegation and some of the scaling challenges during the Series A period. Have your views changed at all after seeing NovaBridge operate over the last few months?
+
+A: Yes, actually. That was one of the biggest things I was watching for after our last conversation. Back in April I mentioned that Priya historically struggled to delegate during high-pressure periods, especially around the Meridian Series A. From what I’ve seen at NovaBridge, she’s made a very deliberate effort to correct that.  
+
+The organisation already feels more structured than Meridian did at a similar stage. She’s clearly empowered functional leads earlier, particularly across product and engineering. I still think she’s deeply involved in major decisions — that’s just who she is — but it no longer feels like everything bottlenecks through her personally.
+
+---
+
+### Q: You also mentioned previously that she had made a few poor senior commercial hiring decisions at Meridian. Has that improved?
+
+A: I think so. That was another area I paid attention to after our last call. At Meridian, some of the early commercial hires weren’t the right fit for the company stage, and Priya relied quite heavily on instinct when building out the leadership team.  
+
+This time the hiring process appears much more disciplined. The new CRO they brought in seems materially stronger than the first VP Sales we hired at Meridian. More enterprise-oriented, more operationally experienced. Priya also seems more open to external input during hiring decisions now, which I’d consider a positive evolution.
+
+---
+
+### Q: In our previous conversation you described her as intense but very persistent in disagreements. Does that still hold true?
+
+A: Absolutely. That hasn’t changed. Priya is still extremely persistent once she believes something matters. The difference now is that she seems better at creating alignment before pushing execution.  
+
+At Meridian there were moments where debates could drag because she’d continue revisiting the same point until everyone was fully convinced. From what I can tell at NovaBridge, there’s more process around decision-making, which reduces some of that friction. But culturally it’s still a high-intensity environment. People who enjoy moving fast and being challenged will probably thrive there.
+
+---
+
+### Q: Last time we also discussed the security incident at Meridian involving the misconfigured S3 bucket. Have you seen any indication that those lessons carried over into the new company?
+
+A: Definitely. In our April discussion I said that security probably wasn’t prioritised early enough at Meridian, and I genuinely think that experience permanently changed how Priya approaches operational risk.  
+
+Everything I’ve seen at NovaBridge suggests security and governance are being built in much earlier this time around. They appear to have formal infrastructure reviews, external compliance support, and clearer engineering controls from day one. It feels much more proactive rather than reactive.
+
+---
+
+### Q: Commercially, how does NovaBridge compare to Meridian at this stage?
+
+A: Honestly, probably ahead. What impressed me most is that Priya seems far more selective now about customer fit. At Meridian we chased almost every revenue opportunity because we needed growth quickly after the pivot.  
+
+At NovaBridge she appears more willing to walk away from deals that don’t align with the long-term product direction. That’s a difficult thing for founders to learn. From what I understand, they’ve already closed several meaningful mid-market customers without heavily customising the product roadmap around individual accounts.
+
+---
+
+### Q: Are there still any concerns from your side?
+
+A: The main thing I’d still highlight is pace and intensity. Priya pushes very hard. That was true at Meridian and it’s still true now. The difference is that the company around her seems better equipped to absorb that pressure operationally.  
+
+I wouldn’t describe the environment as unhealthy, but expectations are clearly high. Some people will love that culture and some won’t. I suspect attrition tolerance is probably still relatively low for underperformers.
+
+---
+
+### Q: Back in April you said you would invest in her next venture “without hesitation.” Do you still feel the same way?
+
+A: More strongly, if anything. The founder I’m seeing now feels more mature operationally than the one I worked beside during Meridian’s earlier years. The ambition and intensity are still there, but there’s more structure behind it now.  
+
+A lot of founders repeat the same mistakes in their second company. Priya actually seems to have internalised the lessons from the first one. That’s relatively rare.
+
+---
+
+End of Transcript

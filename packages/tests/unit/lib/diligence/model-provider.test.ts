@@ -2,7 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { ApiKeyProvider } from "@/lib/generated/prisma/client";
 
 vi.mock("@/lib/generated/prisma/client", () => ({
-  ApiKeyProvider: { OPENAI: "OPENAI", ANTHROPIC: "ANTHROPIC", GOOGLE: "GOOGLE" },
+  ApiKeyProvider: {
+    OPENAI: "OPENAI",
+    ANTHROPIC: "ANTHROPIC",
+    GOOGLE: "GOOGLE",
+    LOCAL: "LOCAL",
+  },
 }));
 
 const mockChatOpenAI = vi.fn();
@@ -24,11 +29,12 @@ vi.mock("@langchain/google-genai", () => ({
 const { ModelProviderRegistry } = await import("@/lib/diligence/model-provider");
 
 describe("ModelProviderRegistry", () => {
-  it("creates a registry with all three providers", () => {
+  it("creates a registry with all providers", () => {
     const registry = new ModelProviderRegistry();
     expect(registry.getProvider(ApiKeyProvider.OPENAI)).toBeDefined();
     expect(registry.getProvider(ApiKeyProvider.ANTHROPIC)).toBeDefined();
     expect(registry.getProvider(ApiKeyProvider.GOOGLE)).toBeDefined();
+    expect(registry.getProvider(ApiKeyProvider.LOCAL)).toBeDefined();
   });
 
   it("throws for unsupported provider", () => {
@@ -116,6 +122,33 @@ describe("ModelProviderRegistry", () => {
         model: "gemini-2.5-flash",
         temperature: 0,
         maxRetries: 2,
+      });
+    });
+  });
+
+  describe("Local LLM provider", () => {
+    it("creates a ChatOpenAI model with a local base URL", () => {
+      const registry = new ModelProviderRegistry();
+      const provider = registry.getProvider(ApiKeyProvider.LOCAL);
+
+      provider.createChatModel({
+        provider: ApiKeyProvider.LOCAL,
+        model: "llama3.1",
+        apiKey: JSON.stringify({
+          baseUrl: "http://localhost:11434/v1",
+          apiKey: null,
+        }),
+      });
+
+      expect(mockChatOpenAI).toHaveBeenCalledWith({
+        apiKey: "local-llm",
+        model: "llama3.1",
+        temperature: 0,
+        maxRetries: 2,
+        useResponsesApi: false,
+        configuration: {
+          baseURL: "http://localhost:11434/v1",
+        },
       });
     });
   });

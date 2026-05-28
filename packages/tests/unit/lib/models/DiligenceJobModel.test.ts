@@ -266,6 +266,132 @@ describe("DiligenceJobModel", () => {
     });
   });
 
+  describe("getCompletedSnapshotsForProject", () => {
+    it("returns completed jobs with grouped insight summaries", async () => {
+      const completedAt = new Date("2024-02-01");
+      mockDiligenceJob.findMany.mockResolvedValue([
+        {
+          id: "job-1",
+          status: "COMPLETED",
+          createdAt: new Date("2024-01-31"),
+          completedAt,
+          progressPercent: 100,
+          tokenUsageTotal: 12000,
+          estimatedCostUsd: 0.08,
+        },
+      ]);
+      mockDiligenceFinding.findMany.mockResolvedValue([
+        {
+          id: "risk-1",
+          jobId: "job-1",
+          title: "Risk",
+          summary: "Risk summary",
+          confidence: 0.9,
+        },
+      ]);
+      mockDiligenceClaim.findMany.mockResolvedValue([
+        {
+          id: "claim-1",
+          jobId: "job-1",
+          claimText: "Claim",
+          confidence: 0.8,
+        },
+      ]);
+      mockDiligenceEntity.findMany.mockResolvedValue([
+        {
+          id: "entity-1",
+          jobId: "job-1",
+          name: "Company",
+          kind: "company",
+          confidence: 0.7,
+        },
+      ]);
+      mockDiligenceContradiction.findMany.mockResolvedValue([
+        {
+          id: "contradiction-1",
+          jobId: "job-1",
+          statementA: "A",
+          statementB: "B",
+          confidence: 0.6,
+        },
+      ]);
+
+      const result = await DiligenceJobModel.getCompletedSnapshotsForProject({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      expect(result).toEqual([
+        {
+          id: "job-1",
+          status: "COMPLETED",
+          createdAt: new Date("2024-01-31"),
+          completedAt,
+          progressPercent: 100,
+          tokenUsageTotal: 12000,
+          estimatedCostUsd: 0.08,
+          insights: {
+            risks: [
+              {
+                id: "risk-1",
+                title: "Risk",
+                summary: "Risk summary",
+                confidence: 0.9,
+              },
+            ],
+            claims: [
+              {
+                id: "claim-1",
+                claimText: "Claim",
+                confidence: 0.8,
+              },
+            ],
+            entities: [
+              {
+                id: "entity-1",
+                name: "Company",
+                kind: "company",
+                confidence: 0.7,
+              },
+            ],
+            contradictions: [
+              {
+                id: "contradiction-1",
+                statementA: "A",
+                statementB: "B",
+                confidence: 0.6,
+              },
+            ],
+          },
+        },
+      ]);
+      expect(mockDiligenceJob.findMany).toHaveBeenCalledWith({
+        where: {
+          projectId: "project-1",
+          userId: "user-1",
+          status: "COMPLETED",
+        },
+        orderBy: { completedAt: "asc" },
+        select: expect.objectContaining({ id: true, completedAt: true }),
+      });
+    });
+
+    it("returns an empty snapshot list without loading child rows", async () => {
+      mockDiligenceJob.findMany.mockResolvedValue([]);
+
+      const result = await DiligenceJobModel.getCompletedSnapshotsForProject({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      expect(result).toEqual([]);
+      expect(mockDiligenceFinding.findMany).not.toHaveBeenCalled();
+      expect(mockDiligenceClaim.findMany).not.toHaveBeenCalled();
+      expect(mockDiligenceEntity.findMany).not.toHaveBeenCalled();
+      expect(mockDiligenceContradiction.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe("getFullInsightsForProject", () => {
     it("returns null when no completed job exists", async () => {
       mockDiligenceJob.findFirst.mockResolvedValue(null);

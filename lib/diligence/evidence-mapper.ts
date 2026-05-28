@@ -15,27 +15,13 @@
  */
 
 import { db } from "@/lib/db";
+import { GRAPH_NODE_SLUG_TO_QUESTION } from "@/lib/diligence/stages";
 import {
-  DiligenceCoreQuestion,
   EvidenceRequirementStatus,
   OntologyNodeKind,
   type Prisma,
 } from "@/lib/generated/prisma/client";
-import { asArray, asString, asNumber } from "@/lib/utils/coerce";
-
-// ─── Node slug → DiligenceCoreQuestion mapping ───────────────────────────────
-// Mirrors the CDD seed's node slugs to the pipeline's question enum.
-
-const NODE_SLUG_TO_QUESTION: Record<string, DiligenceCoreQuestion> = {
-  "identity-ownership": DiligenceCoreQuestion.Q1_IDENTITY,
-  "product-technology": DiligenceCoreQuestion.Q2_PRODUCT,
-  "market-traction": DiligenceCoreQuestion.Q3_MARKET,
-  "execution-capability": DiligenceCoreQuestion.Q4_EXECUTION,
-  "business-model-viability": DiligenceCoreQuestion.Q5_BUSINESS_MODEL,
-  "risk-analysis": DiligenceCoreQuestion.Q6_RISKS,
-  "evidence-quality": DiligenceCoreQuestion.Q7_EVIDENCE,
-  "failure-modes": DiligenceCoreQuestion.Q8_FAILURE_MODES,
-};
+import { asArray } from "@/lib/utils/coerce";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -184,7 +170,7 @@ export async function autoMapEvidenceForJob(input: {
     let analystNote: string | null = null;
 
     // ── Strategy A: node maps to a DiligenceCoreQuestion ─────────────────
-    const question = NODE_SLUG_TO_QUESTION[nodeSlug];
+    const question = GRAPH_NODE_SLUG_TO_QUESTION[nodeSlug];
     if (question) {
       const qa = qaByQuestion.get(question);
       if (qa) {

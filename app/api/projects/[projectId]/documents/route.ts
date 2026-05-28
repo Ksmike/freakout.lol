@@ -5,9 +5,10 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
 import { FirmModel } from "@/lib/models/FirmModel";
 import { BillingModel } from "@/lib/models/BillingModel";
 import { AuditLogModel } from "@/lib/models/AuditLogModel";
-import { AuditAction } from "@/lib/generated/prisma/client";
+import { AuditAction, DiligenceJobStatus } from "@/lib/generated/prisma/client";
 import { logger, generateRequestId } from "@/lib/logger";
 import {
+  ALLOWED_DOCUMENT_FORMATS_LABEL,
   buildProjectBlobPath,
   buildProjectBlobPrefix,
   getFilenameFromProjectBlobPath,
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 const INVALID_PROJECT_ID_ERROR = "Invalid project ID.";
 const INVALID_DOCUMENT_ERROR =
-  "Unsupported document format. Allowed: .txt, .docx, .pages, .pdf, .ppt, .pptx, .key, .keynote.";
+  `Unsupported document format. Allowed: ${ALLOWED_DOCUMENT_FORMATS_LABEL}.`;
 const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
 const UPLOAD_RATE_LIMIT_MAX = 25;
 const UPLOAD_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1_000;
@@ -90,7 +91,8 @@ export async function POST(
   }
 
   // Look up firmId for blob path scoping
-  const projectRecord = await (await import("@/lib/db")).db.project.findFirst({
+  const { db } = await import("@/lib/db");
+  const projectRecord = await db.project.findFirst({
     where: { id: sanitizedProjectId, userId },
     select: { firmId: true },
   });
@@ -129,6 +131,39 @@ export async function POST(
   );
   if (!pathname) {
     return Response.json({ error: "Invalid storage path." }, { status: 400 });
+  }
+
+  const [latestCompletedJob, existingDocument] = await Promise.all([
+    db.diligenceJob.findFirst({
+      where: {
+        projectId: sanitizedProjectId,
+        userId,
+        status: DiligenceJobStatus.COMPLETED,
+      },
+      orderBy: { completedAt: "desc" },
+      select: { completedAt: true },
+    }),
+    db.projectDocument.findFirst({
+      where: {
+        projectId: sanitizedProjectId,
+        userId,
+        pathname,
+      },
+      select: { uploadedAt: true },
+    }),
+  ]);
+  if (
+    latestCompletedJob?.completedAt &&
+    existingDocument?.uploadedAt &&
+    existingDocument.uploadedAt <= latestCompletedJob.completedAt
+  ) {
+    return Response.json(
+      {
+        error:
+          "That filename belongs to a locked snapshot. Rename the file before uploading it as new evidence.",
+      },
+      { status: 409 }
+    );
   }
 
   try {

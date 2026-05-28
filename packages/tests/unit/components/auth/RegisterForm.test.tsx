@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 
 vi.mock("@/lib/actions/auth", () => ({
@@ -43,5 +44,18 @@ describe("RegisterForm", () => {
   it("email field is required", () => {
     render(<RegisterForm />);
     expect(screen.getByLabelText("Email")).toBeRequired();
+  });
+
+  it("toggles password visibility", async () => {
+    const user = userEvent.setup();
+    render(<RegisterForm />);
+
+    const passwordInput = screen.getByLabelText("Password");
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(
+      screen.getByRole("button", { name: "Hide password" })
+    ).toBeInTheDocument();
   });
 });

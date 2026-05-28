@@ -1,0 +1,1 @@
+ALTER TYPE "ApiKeyProvider" ADD VALUE 'LOCAL';

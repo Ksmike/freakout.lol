@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuBot, LuBuilding2, LuCirclePlay, LuRefreshCw, LuUser, LuPackage, LuTrendingUp, LuHandshake, LuFactory, LuFileText } from "react-icons/lu";
+import { LuBot, LuBuilding2, LuCirclePlay, LuFactory, LuFileText, LuGitBranch, LuHandshake, LuHistory, LuLock, LuPackage, LuRefreshCw, LuTrendingUp, LuUpload, LuUser, LuX } from "react-icons/lu";
 import {
   startProjectDueDiligence,
   retryProjectDueDiligence,
@@ -20,6 +20,7 @@ import type {
 } from "@/lib/generated/prisma/client";
 import type { ProjectStatus } from "@/lib/models/ProjectModel";
 import type { ApiKeyStatus } from "@/lib/actions/apiKeys";
+import { ALLOWED_DOCUMENT_ACCEPT } from "@/lib/blob/documents";
 
 type ProjectInspectDocument = {
   id: string;
@@ -43,6 +44,8 @@ type DiligenceJobSummary = {
   tokenUsageTotal: number;
   estimatedCostUsd: number | null;
   errorMessage: string | null;
+  createdAt: Date;
+  completedAt: Date | null;
   stageRuns: Array<{
     stage: DiligenceStageName;
     status: DiligenceStageStatus;
@@ -64,6 +67,17 @@ type DiligenceInsightsSummary = {
   }>;
 };
 
+type DiligenceSnapshotSummary = {
+  id: string;
+  status: DiligenceJobStatus;
+  createdAt: Date;
+  completedAt: Date | null;
+  progressPercent: number;
+  tokenUsageTotal: number;
+  estimatedCostUsd: number | null;
+  insights: DiligenceInsightsSummary;
+};
+
 type ProjectDocumentsPanelLabels = {
   documentsHeading: string;
   fileInputLabel: string;
@@ -75,6 +89,7 @@ type ProjectDocumentsPanelLabels = {
   uploadStatusUploading: string;
   uploadStatusUploaded: string;
   uploadStatusFailed: string;
+  clearUploadCta: string;
   emptyDocuments: string;
   loadingDocuments: string;
   loadError: string;
@@ -126,6 +141,17 @@ type ProjectDocumentsPanelLabels = {
   insightsClaimsHeading: string;
   insightsEntitiesHeading: string;
   insightsContradictionsHeading: string;
+  snapshotHistoryHeading: string;
+  snapshotHistoryDescription: string;
+  snapshotLabel: string;
+  currentSnapshotLabel: string;
+  lockedSnapshotLabel: string;
+  editableSnapshotLabel: string;
+  snapshotCompletedLabel: string;
+  snapshotFilesLabel: string;
+  snapshotOverviewLabel: string;
+  snapshotNoNewFiles: string;
+  activeSnapshotHint: string;
 };
 
 type ProjectDocumentsPanelProps = {
@@ -134,7 +160,7 @@ type ProjectDocumentsPanelProps = {
   hasAnyApiKeys: boolean;
   apiKeyStatuses: ApiKeyStatus[];
   diligenceJob: DiligenceJobSummary | null;
-  insights: DiligenceInsightsSummary | null;
+  diligenceSnapshots: DiligenceSnapshotSummary[];
   labels: ProjectDocumentsPanelLabels;
 };
 
@@ -171,6 +197,23 @@ function formatCurrency(value: number | null): string {
     return "$0.00";
   }
   return `$${value.toFixed(4)}`;
+}
+
+function toTime(value: Date | string | null): number | null {
+  if (!value) {
+    return null;
+  }
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+function formatDate(value: Date | string | null): string {
+  if (!value) {
+    return "-";
+  }
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+    new Date(value)
+  );
 }
 
 const listItemTransition = {
@@ -285,7 +328,7 @@ export function ProjectDocumentsPanel({
   hasAnyApiKeys,
   apiKeyStatuses,
   diligenceJob,
-  insights,
+  diligenceSnapshots,
   labels,
 }: ProjectDocumentsPanelProps) {
   const router = useRouter();
@@ -534,6 +577,57 @@ export function ProjectDocumentsPanel({
     failed: labels.uploadStatusFailed,
   };
   const visibleUploadItems = uploadItems.filter((item) => item.status !== "uploaded");
+  const completedSnapshots = useMemo(
+    () =>
+      diligenceSnapshots.map((snapshot, index) => {
+        const previousCompletedAt =
+          index > 0 ? toTime(diligenceSnapshots[index - 1]?.completedAt) : null;
+        const completedAt = toTime(snapshot.completedAt);
+        const snapshotDocuments = documents.filter((document) => {
+          const uploadedAt = toTime(document.uploadedAt);
+          if (uploadedAt === null || completedAt === null) {
+            return false;
+          }
+          return (
+            (previousCompletedAt === null || uploadedAt > previousCompletedAt) &&
+            uploadedAt <= completedAt
+          );
+        });
+
+        return {
+          ...snapshot,
+          number: index + 1,
+          documents: snapshotDocuments,
+        };
+      }),
+    [diligenceSnapshots, documents]
+  );
+  const displayedCompletedSnapshots = useMemo(
+    () => [...completedSnapshots].reverse(),
+    [completedSnapshots]
+  );
+  const latestCompletedSnapshot =
+    completedSnapshots[completedSnapshots.length - 1] ?? null;
+  const latestCompletedAt = useMemo(() => {
+    const latestSnapshot = diligenceSnapshots[diligenceSnapshots.length - 1];
+    return toTime(latestSnapshot?.completedAt ?? null);
+  }, [diligenceSnapshots]);
+  const activeDocuments = useMemo(
+    () =>
+      documents.filter((document) => {
+        const uploadedAt = toTime(document.uploadedAt);
+        return (
+          uploadedAt !== null &&
+          (latestCompletedAt === null || uploadedAt > latestCompletedAt)
+        );
+      }),
+    [documents, latestCompletedAt]
+  );
+  const activeSnapshotNumber = completedSnapshots.length + 1;
+  const hasCompletedSnapshots = completedSnapshots.length > 0;
+  const runnableDocuments = hasCompletedSnapshots ? activeDocuments : documents;
+  const showDiligenceStageDetails = diligenceJob?.status !== "COMPLETED";
+  const showDiligenceWorker = !diligenceJob || diligenceJob.status !== "COMPLETED";
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -555,6 +649,13 @@ export function ProjectDocumentsPanel({
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     const pickedFiles = Array.from(event.target.files ?? []);
     void uploadFiles(pickedFiles);
+  }
+
+  function handleClearUploadItem(uploadItemKey: string) {
+    setUploadItems((currentItems) =>
+      currentItems.filter((item) => item.key !== uploadItemKey)
+    );
+    setErrorMessage(null);
   }
 
   async function handleBeDiligent() {
@@ -657,9 +758,308 @@ export function ProjectDocumentsPanel({
     });
   }
 
+  function renderUploadDropzone() {
+    if (isDiligenceInProgress) {
+      return null;
+    }
+
+    return (
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+          isDragActive ? "border-primary bg-primary/10" : "border-divider bg-background"
+        }`}
+      >
+        <LuUpload aria-hidden="true" className="mx-auto mb-2 size-5 text-primary" />
+        <p className="text-sm font-medium text-foreground">{labels.dropzoneTitle}</p>
+        <p className="mt-1 text-xs text-foreground/70">{labels.dropzoneHint}</p>
+        {isUploading && (
+          <p className="mt-3 text-xs font-medium text-warning">
+            {labels.uploadInProgress}
+          </p>
+        )}
+        <label
+          htmlFor="files"
+          className="mt-4 inline-block cursor-pointer rounded-md border border-divider bg-content1 px-3 py-2 text-xs font-medium text-foreground hover:bg-content2"
+        >
+          {labels.fileInputLabel}
+        </label>
+        <input
+          ref={fileInputRef}
+          id="files"
+          name="files"
+          type="file"
+          multiple
+          accept={ALLOWED_DOCUMENT_ACCEPT}
+          onChange={handleInputChange}
+          className="sr-only"
+        />
+      </div>
+    );
+  }
+
+  function renderUploadQueue() {
+    if (isDiligenceInProgress || visibleUploadItems.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-foreground">
+          {labels.uploadQueueHeading}
+        </p>
+        <motion.ul layout className="space-y-2">
+          <AnimatePresence initial={false}>
+            {visibleUploadItems.map((item) => (
+              <motion.li
+                layout
+                key={item.key}
+                initial={listItemAnimation.initial}
+                animate={listItemAnimation.animate}
+                exit={listItemAnimation.exit}
+                transition={listItemTransition}
+                className="rounded-md border border-divider bg-background px-3 py-2 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{item.filename}</p>
+                    <p className="text-xs text-foreground/60">{formatSize(item.size)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={`${item.key}-${item.status}`}
+                        initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        transition={{ duration: 0.18 }}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          uploadStatusClassName(item.status)
+                        } ${item.status === "uploading" ? "animate-pulse" : ""}`}
+                      >
+                        {uploadStatusText[item.status]}
+                      </motion.span>
+                    </AnimatePresence>
+                    {item.status === "failed" && (
+                      <button
+                        type="button"
+                        onClick={() => handleClearUploadItem(item.key)}
+                        className="inline-flex items-center gap-1 rounded-md border border-divider px-2 py-1 text-xs font-medium text-foreground/70 hover:bg-content2 hover:text-foreground"
+                      >
+                        <LuX aria-hidden="true" className="size-3.5" />
+                        {labels.clearUploadCta}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {item.error && <p className="mt-2 text-xs text-danger">{item.error}</p>}
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </motion.ul>
+      </div>
+    );
+  }
+
+  function renderDocumentList(input: {
+    documents: ProjectInspectDocument[];
+    locked: boolean;
+  }) {
+    if (input.documents.length === 0) {
+      return <p className="text-sm text-foreground/70">{labels.emptyDocuments}</p>;
+    }
+
+    return (
+      <motion.ul layout className="space-y-2">
+        <AnimatePresence initial={false}>
+          {input.documents.map((document) => (
+            <motion.li
+              layout
+              key={document.pathname}
+              initial={listItemAnimation.initial}
+              animate={listItemAnimation.animate}
+              exit={listItemAnimation.exit}
+              transition={listItemTransition}
+              className="flex flex-col gap-2 rounded-md border border-divider bg-background px-3 py-2 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {document.filename}
+                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-foreground/60">{formatSize(document.size)}</p>
+                  <span className="text-xs text-foreground/50">
+                    {labels.fileStatusLabel}:
+                  </span>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={`${document.pathname}-${document.processingStatus}`}
+                      initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                      transition={{ duration: 0.18 }}
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        documentStatusClassName(document.processingStatus)
+                      } ${
+                        document.processingStatus === "PROCESSING" ? "animate-pulse" : ""
+                      }`}
+                    >
+                      {labels.fileProcessingStatuses[document.processingStatus]}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+                {document.processingError && (
+                  <p className="mt-1 text-xs text-danger">{document.processingError}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-4 sm:shrink-0">
+                <a
+                  href={buildDocumentReadUrl(projectId, document.filename)}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  {labels.viewFileCta}
+                </a>
+                {!input.locked && document.processingStatus === "PROCESSED" && (
+                  <button
+                    type="button"
+                    onClick={() => void handleReprocessDocument(document)}
+                    disabled={reprocessingPaths.includes(document.pathname)}
+                    className="text-xs font-medium text-warning hover:underline disabled:opacity-50"
+                  >
+                    {reprocessingPaths.includes(document.pathname)
+                      ? labels.reprocessInProgress
+                      : labels.reprocessFileCta}
+                  </button>
+                )}
+                {!input.locked && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteDocument(document)}
+                    disabled={deletingPaths.includes(document.pathname)}
+                    className="text-xs font-medium text-danger hover:underline disabled:opacity-50"
+                  >
+                    {deletingPaths.includes(document.pathname)
+                      ? labels.deleteInProgress
+                      : labels.deleteFileCta}
+                  </button>
+                )}
+              </div>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </motion.ul>
+    );
+  }
+
+  function renderSnapshotOverview(insights: DiligenceInsightsSummary) {
+    const hasInsights =
+      insights.risks.length > 0 ||
+      insights.claims.length > 0 ||
+      insights.entities.length > 0 ||
+      insights.contradictions.length > 0;
+
+    if (!hasInsights) {
+      return <p className="text-sm text-foreground/70">{labels.insightsEmpty}</p>;
+    }
+
+    return (
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {labels.insightsRisksHeading}
+          </h4>
+          {insights.risks.length === 0 ? (
+            <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
+          ) : (
+            <ul className="space-y-1">
+              {insights.risks.map((risk) => (
+                <li
+                  key={risk.id}
+                  className="rounded-md border border-divider bg-background px-2.5 py-2"
+                >
+                  <p className="text-xs font-medium text-foreground">{risk.title}</p>
+                  <p className="mt-1 text-xs text-foreground/70">{risk.summary}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {labels.insightsClaimsHeading}
+          </h4>
+          {insights.claims.length === 0 ? (
+            <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
+          ) : (
+            <ul className="space-y-1">
+              {insights.claims.map((claim) => (
+                <li
+                  key={claim.id}
+                  className="rounded-md border border-divider bg-background px-2.5 py-2 text-xs text-foreground"
+                >
+                  {claim.claimText}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {labels.insightsEntitiesHeading}
+          </h4>
+          {insights.entities.length === 0 ? (
+            <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
+          ) : (
+            <ul className="space-y-1">
+              {insights.entities.map((entity) => {
+                const kindMeta = getEntityKindIcon(entity.kind);
+                return (
+                  <li
+                    key={entity.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-divider bg-background px-2.5 py-2"
+                  >
+                    <span className="truncate text-xs font-medium text-foreground">
+                      {entity.name}
+                    </span>
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${kindMeta.className}`}>
+                      <kindMeta.Icon aria-hidden="true" className="size-3" />
+                      {kindMeta.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">
+            {labels.insightsContradictionsHeading}
+          </h4>
+          {insights.contradictions.length === 0 ? (
+            <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
+          ) : (
+            <ul className="space-y-1">
+              {insights.contradictions.map((contradiction) => (
+                <li
+                  key={contradiction.id}
+                  className="rounded-md border border-divider bg-background px-2.5 py-2"
+                >
+                  <p className="text-xs text-foreground">{contradiction.statementA}</p>
+                  <p className="mt-1 text-xs text-danger">{contradiction.statementB}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      {documents.length > 0 && (
+      {runnableDocuments.length > 0 && (
         <div className="order-0 flex justify-end">
           <motion.button
             type="button"
@@ -683,94 +1083,38 @@ export function ProjectDocumentsPanel({
         </div>
       )}
 
-      <section className="order-2 space-y-4 rounded-xl border border-divider bg-content1 p-4 sm:p-6">
-        <h2 className="text-lg font-semibold text-foreground">
-          {labels.documentsHeading}
-        </h2>
-
-        {!isDiligenceInProgress && (
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-              isDragActive
-                ? "border-primary bg-primary/10"
-                : "border-divider bg-background"
-            }`}
-          >
-            <p className="text-sm font-medium text-foreground">{labels.dropzoneTitle}</p>
-            <p className="mt-1 text-xs text-foreground/70">{labels.dropzoneHint}</p>
-            {isUploading && (
-              <p className="mt-3 text-xs font-medium text-warning">
-                {labels.uploadInProgress}
-              </p>
-            )}
-            <label
-              htmlFor="files"
-              className="mt-4 inline-block cursor-pointer rounded-md border border-divider bg-content1 px-3 py-2 text-xs font-medium text-foreground hover:bg-content2"
-            >
-              {labels.fileInputLabel}
-            </label>
-            <input
-              ref={fileInputRef}
-              id="files"
-              name="files"
-              type="file"
-              multiple
-              accept=".txt,.docx,.pages,.pdf,.ppt,.pptx,.key,.keynote"
-              onChange={handleInputChange}
-              className="sr-only"
-            />
+      {latestCompletedSnapshot && (
+        <motion.section
+          layout
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          className="order-2 space-y-4 rounded-xl border border-divider bg-content1 p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-base font-semibold text-foreground">
+              {labels.insightsHeading}
+            </h3>
+            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+              {labels.snapshotLabel} {latestCompletedSnapshot.number}
+            </span>
           </div>
-        )}
+          {renderSnapshotOverview(latestCompletedSnapshot.insights)}
+        </motion.section>
+      )}
 
-        {!isDiligenceInProgress && visibleUploadItems.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">
-              {labels.uploadQueueHeading}
+      <section className="order-3 space-y-4 rounded-xl border border-divider bg-content1 p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {labels.snapshotHistoryHeading}
+            </h2>
+            <p className="mt-1 text-sm text-foreground/60">
+              {labels.snapshotHistoryDescription}
             </p>
-            <motion.ul layout className="space-y-2">
-              <AnimatePresence initial={false}>
-                {visibleUploadItems.map((item) => (
-                  <motion.li
-                    layout
-                    key={item.key}
-                    initial={listItemAnimation.initial}
-                    animate={listItemAnimation.animate}
-                    exit={listItemAnimation.exit}
-                    transition={listItemTransition}
-                    className="rounded-md border border-divider bg-background px-3 py-2 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{item.filename}</p>
-                        <p className="text-xs text-foreground/60">{formatSize(item.size)}</p>
-                      </div>
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={`${item.key}-${item.status}`}
-                          initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                          transition={{ duration: 0.18 }}
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                            uploadStatusClassName(item.status)
-                          } ${item.status === "uploading" ? "animate-pulse" : ""}`}
-                        >
-                          {uploadStatusText[item.status]}
-                        </motion.span>
-                      </AnimatePresence>
-                    </div>
-                    {item.error && (
-                      <p className="mt-2 text-xs text-danger">{item.error}</p>
-                    )}
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </motion.ul>
           </div>
-        )}
+          <LuHistory aria-hidden="true" className="size-5 shrink-0 text-primary" />
+        </div>
 
         {errorMessage && (
           <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -780,90 +1124,123 @@ export function ProjectDocumentsPanel({
 
         {isLoading ? (
           <p className="text-sm text-foreground/70">{labels.loadingDocuments}</p>
-        ) : documents.length === 0 ? (
-          <p className="text-sm text-foreground/70">{labels.emptyDocuments}</p>
         ) : (
-          <motion.ul layout className="space-y-2">
-            <AnimatePresence initial={false}>
-              {documents.map((document) => (
-                <motion.li
+          <div className="relative space-y-4 pl-5">
+            {hasCompletedSnapshots && (
+              <span className="absolute bottom-8 left-2 top-2 w-px bg-divider" />
+            )}
+
+            <motion.article
+              layout
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, ease: "easeOut" }}
+              className="relative space-y-4 rounded-xl border border-warning/35 bg-warning/5 p-4"
+            >
+              {hasCompletedSnapshots && (
+                <span className="absolute -left-[1.18rem] top-5 size-3 rounded-full border-2 border-content1 bg-warning" />
+              )}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold text-foreground">
+                      {hasCompletedSnapshots
+                        ? `${labels.snapshotLabel} ${activeSnapshotNumber}`
+                        : labels.currentSnapshotLabel}
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-content1 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
+                      <LuGitBranch aria-hidden="true" className="size-3" />
+                      {labels.editableSnapshotLabel}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-foreground/60">
+                    {labels.activeSnapshotHint}
+                  </p>
+                </div>
+              </div>
+
+              {renderUploadDropzone()}
+              {renderUploadQueue()}
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">
+                  {labels.snapshotFilesLabel}
+                </h4>
+                {activeDocuments.length === 0 && hasCompletedSnapshots ? (
+                  <p className="text-sm text-foreground/70">
+                    {labels.snapshotNoNewFiles}
+                  </p>
+                ) : (
+                  renderDocumentList({
+                    documents: activeDocuments,
+                    locked: false,
+                  })
+                )}
+              </div>
+            </motion.article>
+
+            {displayedCompletedSnapshots.map((snapshot, index) => {
+              const toneClassName =
+                index % 2 === 0
+                  ? "border-primary/35 bg-primary/5"
+                  : "border-secondary/35 bg-secondary/5";
+
+              return (
+                <motion.article
+                  key={snapshot.id}
                   layout
-                  key={document.pathname}
-                  initial={listItemAnimation.initial}
-                  animate={listItemAnimation.animate}
-                  exit={listItemAnimation.exit}
-                  transition={listItemTransition}
-                  className="flex flex-col gap-2 rounded-md border border-divider bg-background px-3 py-2 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.24, ease: "easeOut" }}
+                  className={`relative space-y-4 rounded-xl border p-4 ${toneClassName}`}
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {document.filename}
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                      <p className="text-xs text-foreground/60">
-                        {formatSize(document.size)}
+                  <span className="absolute -left-[1.18rem] top-5 size-3 rounded-full border-2 border-content1 bg-primary" />
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-foreground">
+                          {labels.snapshotLabel} {snapshot.number}
+                        </h3>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-content1 px-2 py-0.5 text-[11px] font-medium text-foreground/70">
+                          <LuLock aria-hidden="true" className="size-3" />
+                          {labels.lockedSnapshotLabel}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-foreground/60">
+                        {labels.snapshotCompletedLabel}:{" "}
+                        {formatDate(snapshot.completedAt)}
                       </p>
-                      <span className="text-xs text-foreground/50">
-                        {labels.fileStatusLabel}:
-                      </span>
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={`${document.pathname}-${document.processingStatus}`}
-                          initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                          transition={{ duration: 0.18 }}
-                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                            documentStatusClassName(document.processingStatus)
-                          } ${document.processingStatus === "PROCESSING" ? "animate-pulse" : ""}`}
-                        >
-                          {labels.fileProcessingStatuses[document.processingStatus]}
-                        </motion.span>
-                      </AnimatePresence>
                     </div>
-                    {document.processingError && (
-                      <p className="mt-1 text-xs text-danger">{document.processingError}</p>
-                    )}
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
+                      {labels.diligenceStatuses[snapshot.status]}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 sm:shrink-0">
-                    <a
-                      href={buildDocumentReadUrl(projectId, document.filename)}
-                      className="text-xs font-medium text-primary hover:underline"
-                    >
-                      {labels.viewFileCta}
-                    </a>
-                    {document.processingStatus === "PROCESSED" && (
-                      <button
-                        type="button"
-                        onClick={() => void handleReprocessDocument(document)}
-                        disabled={reprocessingPaths.includes(document.pathname)}
-                        className="text-xs font-medium text-warning hover:underline disabled:opacity-50"
-                      >
-                        {reprocessingPaths.includes(document.pathname)
-                          ? labels.reprocessInProgress
-                          : labels.reprocessFileCta}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteDocument(document)}
-                      disabled={deletingPaths.includes(document.pathname)}
-                      className="text-xs font-medium text-danger hover:underline disabled:opacity-50"
-                    >
-                      {deletingPaths.includes(document.pathname)
-                        ? labels.deleteInProgress
-                        : labels.deleteFileCta}
-                    </button>
+
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">
+                      {labels.snapshotOverviewLabel}
+                    </h4>
+                    {renderSnapshotOverview(snapshot.insights)}
                   </div>
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </motion.ul>
+
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-foreground">
+                      {labels.snapshotFilesLabel}
+                    </h4>
+                    {renderDocumentList({
+                      documents: snapshot.documents,
+                      locked: true,
+                    })}
+                  </div>
+                </motion.article>
+              );
+            })}
+          </div>
         )}
       </section>
 
-      {documents.length > 0 && canStartDiligence && enabledApiProviders.length > 0 && (
-        <section className="order-3 space-y-3 rounded-xl border border-divider bg-content1 p-4">
+      {runnableDocuments.length > 0 && canStartDiligence && enabledApiProviders.length > 0 && (
+        <section className="order-4 space-y-3 rounded-xl border border-divider bg-content1 p-4">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1 text-sm">
               <span className="text-foreground/70">{labels.providerSelectionLabel}</span>
@@ -938,13 +1315,14 @@ export function ProjectDocumentsPanel({
         )}
       </AnimatePresence>
 
-      <motion.section
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.24, ease: "easeOut" }}
-        className="order-1 space-y-3 rounded-xl border border-divider bg-content1 p-4"
-      >
+      {showDiligenceWorker && (
+        <motion.section
+          layout
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, ease: "easeOut" }}
+          className="order-1 space-y-3 rounded-xl border border-divider bg-content1 p-4"
+        >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <motion.span
@@ -1128,17 +1506,19 @@ export function ProjectDocumentsPanel({
                 })()}
               </AnimatePresence>
 
-              <div className="h-2 overflow-hidden rounded-full bg-content2">
-                <motion.div
-                  className={`h-full bg-primary ${
-                    isDiligenceInProgress ? "animate-pulse" : ""
-                  }`}
-                  animate={{ width: `${diligenceJob.progressPercent}%` }}
-                  transition={{ type: "spring", stiffness: 140, damping: 24 }}
-                />
-              </div>
+              {showDiligenceStageDetails && (
+                <div className="h-2 overflow-hidden rounded-full bg-content2">
+                  <motion.div
+                    className={`h-full bg-primary ${
+                      isDiligenceInProgress ? "animate-pulse" : ""
+                    }`}
+                    animate={{ width: `${diligenceJob.progressPercent}%` }}
+                    transition={{ type: "spring", stiffness: 140, damping: 24 }}
+                  />
+                </div>
+              )}
 
-              {diligenceJob.stageRuns.length > 0 && (
+              {showDiligenceStageDetails && diligenceJob.stageRuns.length > 0 && (
                 <motion.ul layout className="space-y-1">
                   {diligenceJob.stageRuns.map((stageRun) => {
                     const isCurrentStage = stageRun.status === "RUNNING";
@@ -1225,155 +1605,9 @@ export function ProjectDocumentsPanel({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.section>
+        </motion.section>
+      )}
 
-      <AnimatePresence>
-        {(projectStatus === "reviewed" || projectStatus === "complete") && (
-          <motion.section
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="space-y-4 rounded-xl border border-divider bg-content1 p-4"
-          >
-            <h3 className="text-base font-semibold text-foreground">
-              {labels.insightsHeading}
-            </h3>
-
-            {!insights ? (
-              <p className="text-sm text-foreground/70">{labels.insightsEmpty}</p>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 }}
-                  className="space-y-2"
-                >
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {labels.insightsRisksHeading}
-                  </h4>
-                  {insights.risks.length === 0 ? (
-                    <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {insights.risks.map((risk, i) => (
-                        <motion.li
-                          key={risk.id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.25, delay: 0.15 + i * 0.05 }}
-                          className="rounded-md border border-divider bg-background px-2.5 py-2"
-                        >
-                          <p className="text-xs font-medium text-foreground">{risk.title}</p>
-                          <p className="mt-1 text-xs text-foreground/70">{risk.summary}</p>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
-                  className="space-y-2"
-                >
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {labels.insightsClaimsHeading}
-                  </h4>
-                  {insights.claims.length === 0 ? (
-                    <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {insights.claims.map((claim, i) => (
-                        <motion.li
-                          key={claim.id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.25, delay: 0.25 + i * 0.05 }}
-                          className="rounded-md border border-divider bg-background px-2.5 py-2 text-xs text-foreground"
-                        >
-                          {claim.claimText}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.3 }}
-                  className="space-y-2"
-                >
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {labels.insightsEntitiesHeading}
-                  </h4>
-                  {insights.entities.length === 0 ? (
-                    <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {insights.entities.map((entity, i) => {
-                        const kindMeta = getEntityKindIcon(entity.kind);
-                        return (
-                          <motion.li
-                            key={entity.id}
-                            initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.25, delay: 0.35 + i * 0.05 }}
-                            className="flex items-center justify-between gap-2 rounded-md border border-divider bg-background px-2.5 py-2"
-                          >
-                            <span className="text-xs font-medium text-foreground truncate">
-                              {entity.name}
-                            </span>
-                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${kindMeta.className}`}>
-                              <kindMeta.Icon aria-hidden="true" className="size-3" />
-                              {kindMeta.label}
-                            </span>
-                          </motion.li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.4 }}
-                  className="space-y-2"
-                >
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {labels.insightsContradictionsHeading}
-                  </h4>
-                  {insights.contradictions.length === 0 ? (
-                    <p className="text-xs text-foreground/60">{labels.insightsEmpty}</p>
-                  ) : (
-                    <ul className="space-y-1">
-                      {insights.contradictions.map((contradiction, i) => (
-                        <motion.li
-                          key={contradiction.id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.25, delay: 0.45 + i * 0.05 }}
-                          className="rounded-md border border-divider bg-background px-2.5 py-2"
-                        >
-                          <p className="text-xs text-foreground">
-                            {contradiction.statementA}
-                          </p>
-                          <p className="mt-1 text-xs text-danger">
-                            {contradiction.statementB}
-                          </p>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-              </div>
-            )}
-          </motion.section>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -1,22 +1,54 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { SiOpenai, SiAnthropic, SiGoogle } from "react-icons/si";
-import { FiEdit2, FiTrash2, FiX, FiLoader, FiAlertCircle } from "react-icons/fi";
+import { SiAnthropic, SiGoogle, SiOpenai } from "react-icons/si";
+import { LuServer } from "react-icons/lu";
+import { FiAlertCircle, FiEdit2, FiLoader, FiTrash2, FiX } from "react-icons/fi";
 import {
-  upsertApiKey,
   deleteApiKey,
-  validateApiKey,
   updateApiKeySettings,
+  upsertApiKey,
+  validateApiKey,
 } from "@/lib/actions/apiKeys";
 import type { ApiKeyStatus } from "@/lib/actions/apiKeys";
+import {
+  normalizeLocalLlmBaseUrl,
+  serializeLocalLlmConnectorConfig,
+} from "@/lib/diligence/local-llm";
 import type { ApiKeyProvider } from "@/lib/generated/prisma/client";
 import type { IconType } from "react-icons";
 
-type ProviderMeta = {
+type ProviderLabels = {
   name: string;
   description: string;
   placeholder: string;
+};
+
+export type ApiKeyConnectorLabels = {
+  providers: Record<ApiKeyProvider, ProviderLabels>;
+  connectedStatus: string;
+  notConfiguredStatus: string;
+  updateCredentialTitle: string;
+  revokeCredentialTitle: string;
+  cancelTitle: string;
+  pasteNewCredentialPlaceholder: string;
+  localEndpointLabel: string;
+  localEndpointPlaceholder: string;
+  localApiKeyLabel: string;
+  localApiKeyPlaceholder: string;
+  localApiKeyHint: string;
+  localEndpointInvalid: string;
+  defaultModelLabel: string;
+  enabledLabel: string;
+  saveSettingsCta: string;
+  saveCta: string;
+  savingCta: string;
+  updateCta: string;
+  testConnectionCta: string;
+  testingConnectionCta: string;
+};
+
+type ProviderMeta = {
   Icon: IconType;
   iconColor: string;
   iconBg: string;
@@ -24,61 +56,105 @@ type ProviderMeta = {
 
 const PROVIDER_META: Record<ApiKeyProvider, ProviderMeta> = {
   OPENAI: {
-    name: "OpenAI",
-    description: "GPT-4o, o3, and reasoning models",
-    placeholder: "sk-...",
     Icon: SiOpenai,
-    iconColor: "text-[#10a37f]",
-    iconBg: "bg-[#10a37f]/10",
+    iconColor: "text-success",
+    iconBg: "bg-success/10",
   },
   ANTHROPIC: {
-    name: "Anthropic",
-    description: "Claude Sonnet, Opus, and Haiku",
-    placeholder: "sk-ant-api03-...",
     Icon: SiAnthropic,
-    iconColor: "text-[#d4956a]",
-    iconBg: "bg-[#d4956a]/10",
+    iconColor: "text-warning",
+    iconBg: "bg-warning/10",
   },
   GOOGLE: {
-    name: "Google AI",
-    description: "Gemini 2.5 Pro and Flash",
-    placeholder: "AIzaSy...",
     Icon: SiGoogle,
-    iconColor: "text-[#4285f4]",
-    iconBg: "bg-[#4285f4]/10",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+  },
+  LOCAL: {
+    Icon: LuServer,
+    iconColor: "text-secondary",
+    iconBg: "bg-secondary/10",
   },
 };
 
 type Mode = "idle" | "editing";
 
+function isLocalProvider(provider: ApiKeyProvider): boolean {
+  return provider === "LOCAL";
+}
+
 export function ApiKeyCard({
   initial,
+  labels,
   onUpdate,
 }: {
   initial: ApiKeyStatus;
+  labels: ApiKeyConnectorLabels;
   onUpdate: (updated: ApiKeyStatus) => void;
 }) {
   const { provider } = initial;
   const meta = PROVIDER_META[provider];
+  const providerLabels = labels.providers[provider];
   const { Icon, iconColor, iconBg } = meta;
+  const isLocal = isLocalProvider(provider);
 
   const [status, setStatus] = useState(initial);
   const [mode, setMode] = useState<Mode>("idle");
   const [inputValue, setInputValue] = useState("");
+  const [localBaseUrl, setLocalBaseUrl] = useState(initial.connectorUrl ?? "");
+  const [localApiKey, setLocalApiKey] = useState("");
   const [defaultModel, setDefaultModel] = useState(initial.defaultModel ?? "");
   const [enabled, setEnabled] = useState(initial.enabled);
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  function buildCredentialInput(): {
+    credential: string;
+    connectorUrl: string | null;
+  } | null {
+    if (!isLocal) {
+      const trimmed = inputValue.trim();
+      return trimmed ? { credential: trimmed, connectorUrl: null } : null;
+    }
+
+    const connectorUrl = normalizeLocalLlmBaseUrl(localBaseUrl);
+    if (!connectorUrl) {
+      return null;
+    }
+
+    return {
+      credential: serializeLocalLlmConnectorConfig({
+        baseUrl: connectorUrl,
+        apiKey: localApiKey,
+      }),
+      connectorUrl,
+    };
+  }
+
+  function hasCredentialInput(): boolean {
+    return isLocal ? !!localBaseUrl.trim() : !!inputValue.trim();
+  }
+
+  function resetCredentialInputs(nextConnectorUrl?: string | null) {
+    setInputValue("");
+    setLocalApiKey("");
+    setLocalBaseUrl(nextConnectorUrl ?? "");
+  }
+
   function handleSave() {
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    const credentialInput = buildCredentialInput();
+    if (!credentialInput) {
+      if (isLocal) {
+        setError(labels.localEndpointInvalid);
+      }
+      return;
+    }
+
     setError("");
     startTransition(async () => {
-      // When adding a new key, automatically enable it
       const shouldEnable = status.isSet ? enabled : true;
-      const result = await upsertApiKey(provider, trimmed, {
+      const result = await upsertApiKey(provider, credentialInput.credential, {
         defaultModel,
         enabled: shouldEnable,
       });
@@ -86,18 +162,22 @@ export function ApiKeyCard({
         setError(result.error);
         return;
       }
+
       const updated: ApiKeyStatus = {
         id: status.id,
         provider,
         isSet: true,
-        hint: trimmed.slice(-4),
+        hint: isLocal
+          ? credentialInput.connectorUrl
+          : credentialInput.credential.slice(-4),
+        connectorUrl: credentialInput.connectorUrl,
         defaultModel,
         enabled: shouldEnable,
         lastValidatedAt: status.lastValidatedAt,
       };
       setStatus(updated);
       onUpdate(updated);
-      setInputValue("");
+      resetCredentialInputs(credentialInput.connectorUrl);
       setMode("idle");
       setEnabled(shouldEnable);
     });
@@ -111,6 +191,7 @@ export function ApiKeyCard({
         provider,
         isSet: false,
         hint: null,
+        connectorUrl: null,
         defaultModel,
         enabled: false,
         lastValidatedAt: null,
@@ -118,17 +199,27 @@ export function ApiKeyCard({
       setStatus(updated);
       onUpdate(updated);
       setMode("idle");
-      setInputValue("");
+      resetCredentialInputs(null);
     });
   }
 
   async function handleTestKey() {
-    const trimmed = inputValue.trim();
-    if (!trimmed) return;
+    const credentialInput = buildCredentialInput();
+    if (!credentialInput) {
+      if (isLocal) {
+        setError(labels.localEndpointInvalid);
+      }
+      return;
+    }
+
     setError("");
     setIsValidating(true);
     try {
-      const result = await validateApiKey(provider, trimmed, defaultModel);
+      const result = await validateApiKey(
+        provider,
+        credentialInput.credential,
+        defaultModel
+      );
       if (result.error) {
         setError(result.error);
         return;
@@ -165,57 +256,66 @@ export function ApiKeyCard({
 
   function handleCancel() {
     setMode("idle");
-    setInputValue("");
+    resetCredentialInputs(status.connectorUrl);
     setError("");
   }
 
   const showInput = !status.isSet || mode === "editing";
+  const credentialHint = isLocal
+    ? status.connectorUrl ?? status.hint
+    : status.hint
+      ? `................${status.hint}`
+      : null;
 
   return (
     <div className="rounded-xl border border-divider bg-content1 transition-shadow hover:shadow-sm">
-      {/* Header row */}
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3 sm:flex-1">
-          {/* Provider icon */}
           <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
-            <Icon className={`h-5 w-5 ${iconColor}`} />
+            <Icon className={`h-5 w-5 ${iconColor}`} aria-hidden="true" />
           </div>
 
-          {/* Provider info */}
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">{meta.name}</p>
-            <p className="text-xs leading-snug text-foreground/50">{meta.description}</p>
+            <p className="text-sm font-semibold text-foreground">
+              {providerLabels.name}
+            </p>
+            <p className="text-xs leading-snug text-foreground/50">
+              {providerLabels.description}
+            </p>
           </div>
         </div>
 
-        {/* Status badge + action buttons */}
         <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-3">
           {status.isSet ? (
             <>
-              <span className="flex items-center gap-1.5 rounded-full bg-[#10a37f]/10 px-2.5 py-0.5 text-xs font-medium text-[#10a37f]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#10a37f]" />
-                Connected
+              <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {labels.connectedStatus}
               </span>
               {mode === "idle" && (
                 <div className="flex items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => setMode("editing")}
                     disabled={isPending}
-                    title="Update key"
+                    title={labels.updateCredentialTitle}
+                    aria-label={labels.updateCredentialTitle}
                     className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/40 transition-colors hover:bg-content2 hover:text-foreground disabled:opacity-40"
                   >
-                    <FiEdit2 className="h-3.5 w-3.5" />
+                    <FiEdit2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                   <button
+                    type="button"
                     onClick={handleRevoke}
                     disabled={isPending}
-                    title="Revoke key"
+                    title={labels.revokeCredentialTitle}
+                    aria-label={labels.revokeCredentialTitle}
                     className="flex h-8 w-8 items-center justify-center rounded-md text-foreground/40 transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
                   >
                     {isPending ? (
-                      <FiLoader className="h-3.5 w-3.5 animate-spin" />
+                      <FiLoader className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                     ) : (
-                      <FiTrash2 className="h-3.5 w-3.5" />
+                      <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
                   </button>
                 </div>
@@ -224,68 +324,139 @@ export function ApiKeyCard({
           ) : (
             <span className="flex items-center gap-1.5 rounded-full bg-content2 px-2.5 py-0.5 text-xs font-medium text-foreground/50">
               <span className="h-1.5 w-1.5 rounded-full bg-foreground/20" />
-              Not configured
+              {labels.notConfiguredStatus}
             </span>
           )}
         </div>
       </div>
 
-      {/* Key hint row */}
-      {status.isSet && status.hint && mode === "idle" && (
+      {status.isSet && credentialHint && mode === "idle" && (
         <div className="border-t border-divider px-5 py-2.5">
           <p className="font-mono text-xs text-foreground/40 tracking-wider">
-            ••••••••••••••••{status.hint}
+            {credentialHint}
           </p>
         </div>
       )}
 
-      {/* Input row */}
       {showInput && (
         <div className="border-t border-divider p-4 pt-4 sm:p-5 sm:pt-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <input
-              type="password"
-              value={inputValue}
-              onChange={(e) => {
-                setInputValue(e.target.value);
-                if (error) setError("");
-              }}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              placeholder={mode === "editing" ? "Paste new key to update" : meta.placeholder}
-              autoComplete="off"
-              className="w-full min-w-0 flex-1 rounded-md border border-divider bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:font-sans placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+          <div className="flex flex-col gap-2">
+            {isLocal ? (
+              <>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)]">
+                  <label className="block">
+                    <span className="text-xs text-foreground/60">
+                      {labels.localEndpointLabel}
+                    </span>
+                    <input
+                      type="url"
+                      value={localBaseUrl}
+                      onChange={(e) => {
+                        setLocalBaseUrl(e.target.value);
+                        if (error) setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                      placeholder={labels.localEndpointPlaceholder}
+                      autoComplete="off"
+                      className="mt-1 w-full min-w-0 rounded-md border border-divider bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:font-sans placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs text-foreground/60">
+                      {labels.localApiKeyLabel}
+                    </span>
+                    <input
+                      type="password"
+                      value={localApiKey}
+                      onChange={(e) => {
+                        setLocalApiKey(e.target.value);
+                        if (error) setError("");
+                      }}
+                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                      placeholder={labels.localApiKeyPlaceholder}
+                      autoComplete="off"
+                      className="mt-1 w-full min-w-0 rounded-md border border-divider bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:font-sans placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </label>
+                </div>
+                <label className="block">
+                  <span className="text-xs text-foreground/60">
+                    {labels.defaultModelLabel}
+                  </span>
+                  <input
+                    value={defaultModel}
+                    onChange={(event) => setDefaultModel(event.target.value)}
+                    placeholder="llama3.1"
+                    className="mt-1 w-full rounded-md border border-divider bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                </label>
+              </>
+            ) : (
+              <input
+                type="password"
+                value={inputValue}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  if (error) setError("");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                placeholder={
+                  mode === "editing"
+                    ? labels.pasteNewCredentialPlaceholder
+                    : providerLabels.placeholder
+                }
+                autoComplete="off"
+                className="w-full min-w-0 rounded-md border border-divider bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:font-sans placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            )}
+
+            {isLocal && (
+              <p className="text-xs text-foreground/50">
+                {labels.localApiKeyHint}
+              </p>
+            )}
+
             <div className="flex w-full items-center gap-2 sm:w-auto">
               <button
+                type="button"
                 onClick={handleSave}
-                disabled={isPending || !inputValue.trim()}
+                disabled={isPending || !hasCredentialInput()}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
               >
-                {isPending && <FiLoader className="h-3.5 w-3.5 animate-spin" />}
-                {isPending ? "Saving…" : status.isSet ? "Update" : "Save"}
+                {isPending && <FiLoader className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {isPending
+                  ? labels.savingCta
+                  : status.isSet
+                    ? labels.updateCta
+                    : labels.saveCta}
               </button>
               <button
+                type="button"
                 onClick={() => void handleTestKey()}
-                disabled={isValidating || !inputValue.trim()}
+                disabled={isValidating || !hasCredentialInput()}
                 className="flex-1 rounded-md border border-divider px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-content2 disabled:opacity-40 sm:flex-none"
               >
-                {isValidating ? "Testing…" : "Test key"}
+                {isValidating
+                  ? labels.testingConnectionCta
+                  : labels.testConnectionCta}
               </button>
               {mode === "editing" && (
                 <button
+                  type="button"
                   onClick={handleCancel}
                   disabled={isPending}
-                  title="Cancel"
+                  title={labels.cancelTitle}
+                  aria-label={labels.cancelTitle}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-divider text-foreground/50 transition-colors hover:bg-content2 hover:text-foreground disabled:opacity-50"
                 >
-                  <FiX className="h-4 w-4" />
+                  <FiX className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>
           </div>
           {error && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-danger">
-              <FiAlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <FiAlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {error}
             </p>
           )}
@@ -295,7 +466,9 @@ export function ApiKeyCard({
       {status.isSet && mode === "idle" && (
         <div className="space-y-3 border-t border-divider p-4 pt-4 sm:p-5 sm:pt-4">
           <label className="block">
-            <span className="text-xs text-foreground/60">Default model</span>
+            <span className="text-xs text-foreground/60">
+              {labels.defaultModelLabel}
+            </span>
             <input
               value={defaultModel}
               onChange={(event) => setDefaultModel(event.target.value)}
@@ -309,7 +482,7 @@ export function ApiKeyCard({
               checked={enabled}
               onChange={(event) => setEnabled(event.target.checked)}
             />
-            Provider enabled for diligence jobs
+            {labels.enabledLabel}
           </label>
 
           <button
@@ -318,7 +491,7 @@ export function ApiKeyCard({
             disabled={isPending}
             className="w-full rounded-md border border-divider px-3 py-2 text-xs font-medium text-foreground hover:bg-content2 disabled:opacity-50 sm:w-auto sm:py-1.5"
           >
-            Save provider settings
+            {labels.saveSettingsCta}
           </button>
         </div>
       )}

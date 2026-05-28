@@ -47,6 +47,17 @@ export type DiligenceInsightsSummary = {
   }>;
 };
 
+export type DiligenceSnapshotSummary = {
+  id: string;
+  status: DiligenceJobStatus;
+  createdAt: Date;
+  completedAt: Date | null;
+  progressPercent: number;
+  tokenUsageTotal: number;
+  estimatedCostUsd: number | null;
+  insights: DiligenceInsightsSummary;
+};
+
 export type RestrictedDiligenceInsights = {
   findings: Array<{ type: string; severity: string | null }>;
   claims: Array<{ status: string; confidence: number | null }>;
@@ -373,6 +384,140 @@ export const DiligenceJobModel = {
       entities,
       contradictions,
     };
+  },
+
+  async getCompletedSnapshotsForProject(input: {
+    projectId: string;
+    userId: string;
+  }): Promise<DiligenceSnapshotSummary[]> {
+    const jobs = await db.diligenceJob.findMany({
+      where: {
+        projectId: input.projectId,
+        userId: input.userId,
+        status: DiligenceJobStatus.COMPLETED,
+      },
+      orderBy: {
+        completedAt: "asc",
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        completedAt: true,
+        progressPercent: true,
+        tokenUsageTotal: true,
+        estimatedCostUsd: true,
+      },
+    });
+
+    if (jobs.length === 0) {
+      return [];
+    }
+
+    const jobIds = jobs.map((job) => job.id);
+    const [findings, claims, entities, contradictions] = await Promise.all([
+      db.diligenceFinding.findMany({
+        where: {
+          projectId: input.projectId,
+          userId: input.userId,
+          jobId: { in: jobIds },
+          type: "RISK",
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          jobId: true,
+          title: true,
+          summary: true,
+          confidence: true,
+        },
+      }),
+      db.diligenceClaim.findMany({
+        where: {
+          projectId: input.projectId,
+          userId: input.userId,
+          jobId: { in: jobIds },
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          jobId: true,
+          claimText: true,
+          confidence: true,
+        },
+      }),
+      db.diligenceEntity.findMany({
+        where: {
+          projectId: input.projectId,
+          userId: input.userId,
+          jobId: { in: jobIds },
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          jobId: true,
+          name: true,
+          kind: true,
+          confidence: true,
+        },
+      }),
+      db.diligenceContradiction.findMany({
+        where: {
+          projectId: input.projectId,
+          userId: input.userId,
+          jobId: { in: jobIds },
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          jobId: true,
+          statementA: true,
+          statementB: true,
+          confidence: true,
+        },
+      }),
+    ]);
+
+    return jobs.map((job) => ({
+      ...job,
+      insights: {
+        risks: findings
+          .filter((finding) => finding.jobId === job.id)
+          .slice(0, 6)
+          .map((finding) => ({
+            id: finding.id,
+            title: finding.title,
+            summary: finding.summary,
+            confidence: finding.confidence,
+          })),
+        claims: claims
+          .filter((claim) => claim.jobId === job.id)
+          .slice(0, 6)
+          .map((claim) => ({
+            id: claim.id,
+            claimText: claim.claimText,
+            confidence: claim.confidence,
+          })),
+        entities: entities
+          .filter((entity) => entity.jobId === job.id)
+          .slice(0, 8)
+          .map((entity) => ({
+            id: entity.id,
+            name: entity.name,
+            kind: entity.kind,
+            confidence: entity.confidence,
+          })),
+        contradictions: contradictions
+          .filter((contradiction) => contradiction.jobId === job.id)
+          .slice(0, 6)
+          .map((contradiction) => ({
+            id: contradiction.id,
+            statementA: contradiction.statementA,
+            statementB: contradiction.statementB,
+            confidence: contradiction.confidence,
+          })),
+      },
+    }));
   },
 
   async getRestrictedInsightsForProject(input: {

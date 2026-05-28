@@ -1,7 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/generated/prisma/client", () => ({
-  ApiKeyProvider: { OPENAI: "OPENAI", ANTHROPIC: "ANTHROPIC", GOOGLE: "GOOGLE" },
+  ApiKeyProvider: {
+    OPENAI: "OPENAI",
+    ANTHROPIC: "ANTHROPIC",
+    GOOGLE: "GOOGLE",
+    LOCAL: "LOCAL",
+  },
 }));
 
 const { ModelRouter, defaultModelForProvider } = await import(
@@ -148,5 +153,9 @@ describe("defaultModelForProvider", () => {
 
   it("returns gemini-2.5-flash for GOOGLE", () => {
     expect(defaultModelForProvider("GOOGLE")).toBe("gemini-2.5-flash");
+  });
+
+  it("returns llama3.1 for LOCAL", () => {
+    expect(defaultModelForProvider("LOCAL")).toBe("llama3.1");
   });
 });

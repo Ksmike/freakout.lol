@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ApiKeyCard } from "./ApiKeyCard";
+import { ApiKeyCard, type ApiKeyConnectorLabels } from "./ApiKeyCard";
 import type { ApiKeyStatus } from "@/lib/actions/apiKeys";
 
-export function ApiKeySection({ initial }: { initial: ApiKeyStatus[] }) {
+export function ApiKeySection({
+  initial,
+  labels,
+}: {
+  initial: ApiKeyStatus[];
+  labels: ApiKeyConnectorLabels;
+}) {
   const [statuses, setStatuses] = useState(initial);
 
   function handleUpdate(updated: ApiKeyStatus) {
@@ -19,6 +25,7 @@ export function ApiKeySection({ initial }: { initial: ApiKeyStatus[] }) {
         <ApiKeyCard
           key={status.provider}
           initial={status}
+          labels={labels}
           onUpdate={handleUpdate}
         />
       ))}

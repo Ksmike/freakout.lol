@@ -10,12 +10,16 @@ import { FirmModel } from "@/lib/models/FirmModel";
 import { AuditLogModel } from "@/lib/models/AuditLogModel";
 import { logger, generateRequestId } from "@/lib/logger";
 import {
+  ALLOWED_DOCUMENT_FORMATS_LABEL,
   buildProjectBlobPath,
   sanitizeDocumentPathSegments,
   sanitizeProjectId,
 } from "@/lib/blob/documents";
 
 export const dynamic = "force-dynamic";
+
+const INVALID_DOCUMENT_PATH_ERROR =
+  `Unsupported document format or path. Allowed: ${ALLOWED_DOCUMENT_FORMATS_LABEL}.`;
 
 export async function GET(
   _request: Request,
@@ -38,10 +42,7 @@ export async function GET(
   const sanitizedDocumentPath = sanitizeDocumentPathSegments(documentPath);
   if (!sanitizedDocumentPath) {
     return Response.json(
-      {
-        error:
-          "Unsupported document format or path. Allowed: .txt, .docx, .pages, .pdf, .ppt, .pptx, .key, .keynote.",
-      },
+      { error: INVALID_DOCUMENT_PATH_ERROR },
       { status: 400 }
     );
   }
@@ -113,10 +114,7 @@ export async function DELETE(
   const sanitizedDocumentPath = sanitizeDocumentPathSegments(documentPath);
   if (!sanitizedDocumentPath) {
     return Response.json(
-      {
-        error:
-          "Unsupported document format or path. Allowed: .txt, .docx, .pages, .pdf, .ppt, .pptx, .key, .keynote.",
-      },
+      { error: INVALID_DOCUMENT_PATH_ERROR },
       { status: 400 }
     );
   }
@@ -201,10 +199,7 @@ export async function PATCH(
   const sanitizedDocumentPath = sanitizeDocumentPathSegments(documentPath);
   if (!sanitizedDocumentPath) {
     return Response.json(
-      {
-        error:
-          "Unsupported document format or path. Allowed: .txt, .docx, .pages, .pdf, .ppt, .pptx, .key, .keynote.",
-      },
+      { error: INVALID_DOCUMENT_PATH_ERROR },
       { status: 400 }
     );
   }

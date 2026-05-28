@@ -4,8 +4,16 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { ApiKeyProvider } from "@/lib/generated/prisma/client";
+import {
+  getLocalLlmConnectorHint,
+  parseLocalLlmConnectorConfig,
+  serializeLocalLlmConnectorConfig,
+} from "@/lib/diligence/local-llm";
 import { ModelProviderRegistry } from "@/lib/diligence/model-provider";
-import { defaultModelForProvider } from "@/lib/diligence/model-router";
+import {
+  MODEL_PROVIDER_ORDER,
+  defaultModelForProvider,
+} from "@/lib/diligence/model-router";
 import { UserApiKeyModel } from "@/lib/models/UserApiKeyModel";
 
 export type ApiKeyStatus = {
@@ -13,12 +21,13 @@ export type ApiKeyStatus = {
   provider: ApiKeyProvider;
   isSet: boolean;
   hint: string | null;
+  connectorUrl: string | null;
   defaultModel: string | null;
   enabled: boolean;
   lastValidatedAt: string | null;
 };
 
-const PROVIDERS: ApiKeyProvider[] = ["OPENAI", "ANTHROPIC", "GOOGLE"];
+const PROVIDERS = MODEL_PROVIDER_ORDER;
 
 /**
  * Validates the format/prefix of an API key for a given provider.
@@ -56,8 +65,55 @@ function validateKeyFormat(provider: ApiKeyProvider, key: string): string | null
       }
       return null;
 
+    case "LOCAL":
+      if (!parseLocalLlmConnectorConfig(key)) {
+        return "Enter a valid HTTP(S) OpenAI-compatible local LLM endpoint URL.";
+      }
+      return null;
+
     default:
       return null;
+  }
+}
+
+function buildCredentialForStorage(
+  provider: ApiKeyProvider,
+  rawCredential: string
+): { storedCredential: string; keyHint: string; connectorUrl: string | null } {
+  if (provider !== "LOCAL") {
+    return {
+      storedCredential: rawCredential,
+      keyHint: rawCredential.slice(-4),
+      connectorUrl: null,
+    };
+  }
+
+  const connector = parseLocalLlmConnectorConfig(rawCredential);
+  if (!connector) {
+    throw new Error("Invalid local LLM connector.");
+  }
+
+  return {
+    storedCredential: serializeLocalLlmConnectorConfig(connector),
+    keyHint: "local",
+    connectorUrl: connector.baseUrl,
+  };
+}
+
+function getConnectorUrlForStatus(input: {
+  provider: ApiKeyProvider;
+  encryptedKey?: string;
+}): string | null {
+  if (input.provider !== "LOCAL" || !input.encryptedKey) {
+    return null;
+  }
+
+  try {
+    return parseLocalLlmConnectorConfig(
+      UserApiKeyModel.decryptApiKey(input.encryptedKey)
+    )?.baseUrl ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -69,6 +125,7 @@ export async function getApiKeyStatuses(): Promise<ApiKeyStatus[]> {
       provider,
       isSet: false,
       hint: null,
+      connectorUrl: null,
       defaultModel: defaultModelForProvider(provider),
       enabled: false,
       lastValidatedAt: null,
@@ -79,11 +136,19 @@ export async function getApiKeyStatuses(): Promise<ApiKeyStatus[]> {
 
   return PROVIDERS.map((provider) => {
     const key = keys.find((k) => k.provider === provider);
+    const connectorUrl = getConnectorUrlForStatus({
+      provider,
+      encryptedKey: key?.encryptedKey,
+    });
     return {
       id: key?.id ?? null,
       provider,
       isSet: !!key,
-      hint: key?.keyHint ?? null,
+      hint:
+        provider === "LOCAL" && connectorUrl
+          ? getLocalLlmConnectorHint(connectorUrl)
+          : key?.keyHint ?? null,
+      connectorUrl,
       defaultModel: key?.defaultModel ?? defaultModelForProvider(provider),
       enabled: key?.enabled ?? false,
       lastValidatedAt: key?.lastValidatedAt?.toISOString() ?? null,
@@ -131,10 +196,17 @@ export async function validateApiKey(
   const formatError = validateKeyFormat(provider, trimmed);
   if (formatError) return { error: formatError };
 
+  let credential: ReturnType<typeof buildCredentialForStorage>;
+  try {
+    credential = buildCredentialForStorage(provider, trimmed);
+  } catch {
+    return { error: "Invalid local LLM connector." };
+  }
+
   const model = requestedModel?.trim() || defaultModelForProvider(provider);
   const validation = await pingProviderKey({
     provider,
-    apiKey: trimmed,
+    apiKey: credential.storedCredential,
     model,
   });
 
@@ -171,13 +243,19 @@ export async function upsertApiKey(
   // Provider-specific format validation
   const formatError = validateKeyFormat(provider, trimmed);
   if (formatError) return { error: formatError };
+  let credential: ReturnType<typeof buildCredentialForStorage>;
+  try {
+    credential = buildCredentialForStorage(provider, trimmed);
+  } catch {
+    return { error: "Invalid local LLM connector." };
+  }
 
   const defaultModel =
     options?.defaultModel?.trim() || defaultModelForProvider(provider);
   if (options?.validateBeforeSave) {
     const validation = await pingProviderKey({
       provider,
-      apiKey: trimmed,
+      apiKey: credential.storedCredential,
       model: defaultModel,
     });
     if (!validation.isValid) {
@@ -185,8 +263,10 @@ export async function upsertApiKey(
     }
   }
 
-  const encryptedKey = UserApiKeyModel.encryptApiKey(trimmed);
-  const keyHint = trimmed.slice(-4);
+  const encryptedKey = UserApiKeyModel.encryptApiKey(
+    credential.storedCredential
+  );
+  const keyHint = credential.keyHint;
   const now = new Date();
 
   await db.userApiKey.upsert({

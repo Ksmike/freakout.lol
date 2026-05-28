@@ -3,7 +3,11 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ModelProviderRegistry } from "@/lib/diligence/model-provider";
-import { DiligenceJobStatus, type DiligenceCoreQuestion } from "@/lib/generated/prisma/client";
+import {
+  DiligenceJobStatus,
+  type ApiKeyProvider,
+  type DiligenceCoreQuestion,
+} from "@/lib/generated/prisma/client";
 import { ProjectModel } from "@/lib/models/ProjectModel";
 import { UserApiKeyModel } from "@/lib/models/UserApiKeyModel";
 import { asArray, asRecord, asString } from "@/lib/utils/coerce";
@@ -232,12 +236,12 @@ export async function askProjectEnquiry(
 
 async function resolveModelCredentials(input: {
   userId: string;
-  preferredProvider: "OPENAI" | "ANTHROPIC" | "GOOGLE";
+  preferredProvider: ApiKeyProvider;
   preferredModel: string;
   preferredUserApiKeyId: string | null;
 }): Promise<
   | {
-      provider: "OPENAI" | "ANTHROPIC" | "GOOGLE";
+      provider: ApiKeyProvider;
       model: string;
       apiKey: string;
     }

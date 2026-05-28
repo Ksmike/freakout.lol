@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 vi.mock("@/lib/actions/auth", () => ({
@@ -37,5 +38,18 @@ describe("LoginForm", () => {
       "type",
       "password"
     );
+  });
+
+  it("toggles password visibility", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    const passwordInput = screen.getByLabelText("Password");
+    await user.click(screen.getByRole("button", { name: "Show password" }));
+
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(
+      screen.getByRole("button", { name: "Hide password" })
+    ).toBeInTheDocument();
   });
 });

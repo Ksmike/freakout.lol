@@ -4,6 +4,7 @@ enum ApiKeyProvider {
     OPENAI
     ANTHROPIC
     GOOGLE
+    LOCAL
 }
 
 model UserApiKey {

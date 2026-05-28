@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/crypto";
-import { ApiKeyProvider } from "@/lib/generated/prisma/client";
+import type { ApiKeyProvider } from "@/lib/generated/prisma/client";
 
 export const UserApiKeyModel = {
   async listForUser(userId: string) {
@@ -9,6 +9,7 @@ export const UserApiKeyModel = {
       select: {
         id: true,
         provider: true,
+        encryptedKey: true,
         keyHint: true,
         defaultModel: true,
         enabled: true,

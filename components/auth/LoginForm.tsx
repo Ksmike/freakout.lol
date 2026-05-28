@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { login } from "@/lib/actions/auth";
 import Link from "next/link";
 import { LinkedInButton } from "@/components/auth/LinkedInButton";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(
@@ -48,23 +49,14 @@ export function LoginForm() {
           />
         </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="password"
-            className="text-sm font-medium text-foreground"
-          >
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="w-full rounded-md border border-divider bg-content1 px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary"
-            placeholder="••••••••"
-          />
-        </div>
+        <PasswordInput
+          id="password"
+          name="password"
+          label="Password"
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+        />
 
         <button
           type="submit"

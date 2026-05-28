@@ -1,5 +1,6 @@
-const ALLOWED_DOCUMENT_EXTENSIONS = new Set([
+export const ALLOWED_DOCUMENT_EXTENSIONS = [
   ".txt",
+  ".rtf",
   ".docx",
   ".pages",
   ".pdf",
@@ -7,7 +8,14 @@ const ALLOWED_DOCUMENT_EXTENSIONS = new Set([
   ".pptx",
   ".key",
   ".keynote",
-]);
+] as const;
+export const ALLOWED_DOCUMENT_ACCEPT = ALLOWED_DOCUMENT_EXTENSIONS.join(",");
+export const ALLOWED_DOCUMENT_FORMATS_LABEL =
+  ALLOWED_DOCUMENT_EXTENSIONS.join(", ");
+
+const ALLOWED_DOCUMENT_EXTENSION_SET = new Set<string>(
+  ALLOWED_DOCUMENT_EXTENSIONS
+);
 const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]+$/;
 const PATH_SEGMENT_PATTERN = /^[A-Za-z0-9._() -]+$/;
 
@@ -53,7 +61,7 @@ export function sanitizeDocumentFilename(fileName: string): string | null {
   }
 
   const extension = getLowercaseExtension(normalizedBasename);
-  if (!ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
+  if (!ALLOWED_DOCUMENT_EXTENSION_SET.has(extension)) {
     return null;
   }
 
@@ -77,7 +85,7 @@ export function sanitizeDocumentPathSegments(segments: string[]): string | null 
   const extension = getLowercaseExtension(
     sanitizedSegments[sanitizedSegments.length - 1]
   );
-  if (!ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
+  if (!ALLOWED_DOCUMENT_EXTENSION_SET.has(extension)) {
     return null;
   }
 

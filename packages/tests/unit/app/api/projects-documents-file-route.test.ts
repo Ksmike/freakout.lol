@@ -111,6 +111,27 @@ describe("project document read route", () => {
     expect(response.status).toBe(404);
   });
 
+  it("allows RTF document paths", async () => {
+    authMock.mockResolvedValue({ user: { id: "user-1" } });
+    getMock.mockResolvedValue(null);
+
+    const route = await import(
+      "@/app/api/projects/[projectId]/documents/[...documentPath]/route"
+    );
+
+    const response = await route.GET(new Request("http://localhost"), {
+      params: Promise.resolve({
+        projectId: "project-1",
+        documentPath: ["emails", "nycemail.rtf"],
+      }),
+    });
+
+    expect(getMock).toHaveBeenCalledWith("firm-1/project-1/emails/nycemail.rtf", {
+      access: "private",
+    });
+    expect(response.status).toBe(404);
+  });
+
   it("streams a private document when found", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     getMock.mockResolvedValue({

@@ -5,7 +5,7 @@ import { getApiKeyStatuses } from "@/lib/actions/apiKeys";
 import { getLabelsForLocale } from "@/labels";
 
 export const metadata = {
-  title: "API Keys | Freakout.lol",
+  title: "AI Connectors | Freakout.lol",
 };
 
 export default async function ApiKeysSettingsPage() {
@@ -21,7 +21,10 @@ export default async function ApiKeysSettingsPage() {
         description={t.apiKeysDescription}
       />
 
-      <ApiKeySection initial={apiKeyStatuses} />
+      <ApiKeySection
+        initial={apiKeyStatuses}
+        labels={t.apiKeyConnectors}
+      />
 
       <div className="mt-4 flex items-center gap-2 text-xs text-foreground/40">
         <LuShield className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

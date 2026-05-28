@@ -150,6 +150,10 @@ vi.mock("@/lib/diligence/evidence-mapper", () => ({
   autoMapEvidenceForJob: vi.fn().mockResolvedValue({ mapped: 0, skipped: 0 }),
 }));
 
+vi.mock("@/lib/diligence/graph-question-context", () => ({
+  loadGraphQuestionPromptContext: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/diligence/stages", () => ({
   STAGE_TO_QUESTION: {
     Q1_IDENTITY_AND_OWNERSHIP: "Q1_IDENTITY",

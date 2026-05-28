@@ -2,6 +2,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { type ChunkSourceMap } from "@/lib/diligence/corroboration";
 import { DiligenceLLMService } from "@/lib/diligence/diligence-llm-service";
+import { loadGraphQuestionPromptContext } from "@/lib/diligence/graph-question-context";
 import { getStagePromptPlan } from "@/lib/diligence/prompts";
 import { STAGE_TO_QUESTION } from "@/lib/diligence/stages";
 import {
@@ -106,6 +107,13 @@ async function buildStageUserPrompt(
   const plan = getStagePromptPlan(ctx.stage);
 
   const sections: string[] = [plan.userInstruction];
+  const graphQuestionContext = await loadGraphQuestionPromptContext({
+    projectId: ctx.projectId,
+    stage: ctx.stage,
+  });
+  if (graphQuestionContext) {
+    sections.push("", graphQuestionContext);
+  }
 
   if (includeFullChunks) {
     const chunks = await loadChunksForPrompt(ctx);

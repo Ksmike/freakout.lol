@@ -45,6 +45,25 @@ export const STAGE_TO_QUESTION: Partial<
   [DiligenceStageName.Q8_FAILURE_MODES_AND_FRAGILITY]: DiligenceCoreQuestion.Q8_FAILURE_MODES,
 };
 
+export const STAGE_TO_GRAPH_NODE_SLUG: Partial<Record<DiligenceStageName, string>> = {
+  [DiligenceStageName.Q1_IDENTITY_AND_OWNERSHIP]: "identity-ownership",
+  [DiligenceStageName.Q2_PRODUCT_AND_TECHNOLOGY]: "product-technology",
+  [DiligenceStageName.Q3_MARKET_AND_TRACTION]: "market-traction",
+  [DiligenceStageName.Q4_EXECUTION_CAPABILITY]: "execution-capability",
+  [DiligenceStageName.Q5_BUSINESS_MODEL_VIABILITY]: "business-model-viability",
+  [DiligenceStageName.Q6_RISK_ANALYSIS]: "risk-analysis",
+  [DiligenceStageName.Q7_EVIDENCE_QUALITY]: "evidence-quality",
+  [DiligenceStageName.Q8_FAILURE_MODES_AND_FRAGILITY]: "failure-modes",
+};
+
+export const GRAPH_NODE_SLUG_TO_QUESTION: Record<string, DiligenceCoreQuestion> =
+  Object.fromEntries(
+    Object.entries(STAGE_TO_GRAPH_NODE_SLUG).flatMap(([stage, nodeSlug]) => {
+      const question = STAGE_TO_QUESTION[stage as DiligenceStageName];
+      return question && nodeSlug ? [[nodeSlug, question]] : [];
+    })
+  ) as Record<string, DiligenceCoreQuestion>;
+
 export function normalizeStageName(
   stage: DiligenceStageName | string | null | undefined
 ): DiligenceStageName | null {

@@ -169,6 +169,7 @@ vi.mock("@/lib/models/ProjectModel", () => ({
 
 const mockDiligenceJobModel = {
   findLatestWithStagesForProject: vi.fn().mockResolvedValue(null),
+  getCompletedSnapshotsForProject: vi.fn().mockResolvedValue([]),
 };
 vi.mock("@/lib/models/DiligenceJobModel", () => ({
   DiligenceJobModel: mockDiligenceJobModel,

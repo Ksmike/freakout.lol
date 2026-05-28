@@ -1,0 +1,61 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Received blank copy of the text from Thursdays article - \
+\
+# Former Meridian Executives Face Renewed Scrutiny as NovaBridge Expands\
+\
+Questions emerge over historical disclosures, customer claims, and investor communications tied to prior venture-backed startup.\
+\
+By Elena Ross  \
+July 2026\
+\
+LONDON \'97 As NovaBridge Technologies positions itself as a rising player in artificial intelligence software for private equity firms, renewed questions are surfacing around the track record of its founder, Priya Anand, and the circumstances surrounding the sale of her previous company, Meridian Analytics.\
+\
+NovaBridge, a London-based startup developing software intended to structure due diligence and investment analysis, has recently attracted attention from mid-market private equity firms and venture investors eager to capitalize on the growing demand for AI-assisted financial workflows.\
+\
+But interviews with former employees, investors, and industry participants \'97 as well as previously undisclosed diligence materials reviewed by this newspaper \'97 suggest that some concerns surrounding Meridian Analytics were never fully resolved following the company\'92s 2024 acquisition by DataLoop Inc.\
+\
+Several former Meridian employees described a company culture driven by aggressive growth targets and intense operational pressure during the period leading up to its acquisition. Two former managers, speaking on condition of anonymity because of ongoing industry relationships, alleged that internal reporting processes during fundraising periods were \'93highly optimistic\'94 and occasionally \'93blurred the line between pipeline and committed revenue.\'94\
+\
+No evidence has emerged that Meridian or its executives committed accounting fraud or violated securities laws. However, multiple former stakeholders questioned whether investors were given an overly favourable picture of customer traction prior to the sale.\
+\
+One former employee described a recurring tension between \'93what leadership hoped would close and what had actually closed,\'94 particularly during the company\'92s Series A fundraising process.\
+\
+Anand, who served as Meridian\'92s COO, was widely credited internally with driving the company\'92s commercial pivot into vertical SaaS products for financial services. Former colleagues consistently described her as operationally disciplined and deeply involved with enterprise customers.\
+\
+\'93She was relentless,\'94 said James Harrington, Meridian\'92s former CTO, in a prior reference discussion reviewed by this newspaper. \'93One of the best operators I\'92ve worked with.\'94\
+\
+At the same time, Harrington acknowledged that Meridian experienced internal scaling problems during periods of rapid growth, including engineering attrition and a security incident involving the exposure of client metadata through a misconfigured cloud storage bucket.\
+\
+The incident, which has not previously been publicly reported, reportedly exposed limited customer metadata for approximately 48 hours before being contained. Former employees familiar with the matter said affected clients were notified and external auditors were later brought in to review the company\'92s security procedures.\
+\
+DataLoop declined to comment on the specifics of the incident but said in a statement that Meridian underwent \'93standard post-acquisition technical and compliance review procedures.\'94\
+\
+Questions have also emerged around some of NovaBridge\'92s more recent commercial claims.\
+\
+A February commercial diligence report prepared by Whitmore Partners LLP, reviewed by this newspaper, stated that investigators were unable to independently verify NovaBridge\'92s claim of having secured three letters of intent from private equity firms. According to the report, two firms characterized discussions as \'93early-stage exploratory conversations\'94 rather than formal commercial commitments.\
+\
+NovaBridge disputed that characterization, stating that \'93customer engagement has materially advanced\'94 since the report was prepared and that several firms are now engaged in active procurement discussions.\
+\
+In a written statement, Anand said: \'93Building enterprise software requires iterative customer engagement. We have always tried to represent our commercial progress accurately and responsibly.\'94\
+\
+The company added that it has since strengthened internal governance procedures, formalized security reviews, and expanded its leadership structure.\
+\
+Despite the scrutiny, NovaBridge continues to attract industry interest.\
+\
+Several investors interviewed for this article described the company\'92s core concept \'97 combining knowledge graphs, evidence structuring, and AI-assisted reasoning for deal diligence \'97 as ambitious but potentially differentiated in a crowded market of workflow software providers.\
+\
+\'93There\'92s a legitimate product vision there,\'94 said one venture investor who reviewed the company earlier this year but ultimately declined to invest. \'93The question isn\'92t whether the problem exists. It\'92s whether they can operationalize this without overpromising what AI can realistically deliver.\'94\
+\
+Current and former employees alike described Anand as unusually persistent, highly detail-oriented, and intensely demanding \'97 qualities some investors view as necessary for enterprise software founders operating in competitive markets.\
+\
+Still, the re-emergence of unresolved questions surrounding Meridian may complicate NovaBridge\'92s efforts to position itself as a trusted infrastructure provider for some of the financial industry\'92s most sensitive data.\
+\
+For now, investors appear willing to give the company the benefit of the doubt.\
+\
+Whether that confidence endures may depend less on narrative \'97 and more on whether NovaBridge can convert early interest into measurable commercial adoption.}

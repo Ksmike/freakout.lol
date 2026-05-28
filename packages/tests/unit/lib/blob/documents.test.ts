@@ -18,6 +18,7 @@ describe("blob document path helpers", () => {
 
   it("validates document filenames and extensions", () => {
     expect(sanitizeDocumentFilename("notes.txt")).toBe("notes.txt");
+    expect(sanitizeDocumentFilename("nycemail.rtf")).toBe("nycemail.rtf");
     expect(sanitizeDocumentFilename("report.PDF")).toBe("report.PDF");
     expect(sanitizeDocumentFilename("deck.pptx")).toBe("deck.pptx");
     expect(sanitizeDocumentFilename("slides.PPT")).toBe("slides.PPT");
@@ -30,6 +31,9 @@ describe("blob document path helpers", () => {
   it("validates document path segments", () => {
     expect(sanitizeDocumentPathSegments(["reports", "final.pdf"])).toBe(
       "reports/final.pdf"
+    );
+    expect(sanitizeDocumentPathSegments(["emails", "nycemail.rtf"])).toBe(
+      "emails/nycemail.rtf"
     );
     expect(sanitizeDocumentPathSegments(["decks", "investor.pptx"])).toBe(
       "decks/investor.pptx"

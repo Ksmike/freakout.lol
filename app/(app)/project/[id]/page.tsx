@@ -42,21 +42,17 @@ export default async function ProjectInspectPage({
   const hasAnyApiKeys = apiKeyStatuses.some(
     (status) => status.isSet && status.enabled
   );
-  const [diligenceJob, graphGoal] = await Promise.all([
+  const [diligenceJob, graphGoal, diligenceSnapshots] = await Promise.all([
     DiligenceJobModel.findLatestWithStagesForProject({
       projectId: project.id,
       userId: session.user.id,
     }),
     getProjectGoalWithRequirements(project.id),
+    DiligenceJobModel.getCompletedSnapshotsForProject({
+      projectId: project.id,
+      userId: session.user.id,
+    }),
   ]);
-  const insights =
-    project.status === "reviewed" || project.status === "complete"
-      ? await DiligenceJobModel.getInsightsForProject({
-          projectId: project.id,
-          userId: session.user.id,
-        })
-      : null;
-
   const [gaps, mappings] = graphGoal
     ? await Promise.all([
         getProjectGaps(project.id),
@@ -84,7 +80,7 @@ export default async function ProjectInspectPage({
         hasAnyApiKeys={hasAnyApiKeys}
         apiKeyStatuses={apiKeyStatuses}
         diligenceJob={diligenceJob}
-        insights={insights}
+        diligenceSnapshots={diligenceSnapshots}
         labels={labels.app.projectInspect}
       />
 

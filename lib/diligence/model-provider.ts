@@ -2,6 +2,10 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { ApiKeyProvider } from "@/lib/generated/prisma/client";
+import {
+  getLocalLlmApiKey,
+  parseLocalLlmConnectorConfig,
+} from "@/lib/diligence/local-llm";
 
 export type UsageMetadata = {
   input_tokens?: number;
@@ -71,6 +75,28 @@ class GoogleModelProvider implements ModelProvider {
   }
 }
 
+class LocalLlmModelProvider implements ModelProvider {
+  provider = ApiKeyProvider.LOCAL;
+
+  createChatModel(config: ProviderModelConfig): ChatModelLike {
+    const connector = parseLocalLlmConnectorConfig(config.apiKey);
+    if (!connector) {
+      throw new Error("Local LLM connector is missing a valid base URL.");
+    }
+
+    return new ChatOpenAI({
+      apiKey: getLocalLlmApiKey(connector),
+      model: config.model,
+      temperature: config.temperature ?? 0,
+      maxRetries: config.maxRetries ?? 2,
+      useResponsesApi: false,
+      configuration: {
+        baseURL: connector.baseUrl,
+      },
+    }) as unknown as ChatModelLike;
+  }
+}
+
 export class ModelProviderRegistry {
   private readonly providers: Map<ApiKeyProvider, ModelProvider>;
 
@@ -79,6 +105,7 @@ export class ModelProviderRegistry {
       new OpenAiModelProvider(),
       new AnthropicModelProvider(),
       new GoogleModelProvider(),
+      new LocalLlmModelProvider(),
     ];
     this.providers = new Map(
       allProviders.map((provider) => [provider.provider, provider])

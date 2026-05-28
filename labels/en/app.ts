@@ -41,6 +41,7 @@ export const appLabels: AppLabels["app"] = {
     uploadStatusUploading: "Uploading",
     uploadStatusUploaded: "Uploaded",
     uploadStatusFailed: "Failed",
+    clearUploadCta: "Clear",
     emptyDocuments: "No files uploaded yet.",
     loadingDocuments: "Loading files...",
     loadError: "Failed to load files.",
@@ -123,6 +124,19 @@ export const appLabels: AppLabels["app"] = {
     insightsClaimsHeading: "Key claims",
     insightsEntitiesHeading: "Core entities",
     insightsContradictionsHeading: "Contradictions",
+    snapshotHistoryHeading: "Snapshot history",
+    snapshotHistoryDescription:
+      "Each completed diligence run locks its source files and preserves the knowledge summary for comparison.",
+    snapshotLabel: "Snapshot",
+    currentSnapshotLabel: "Current snapshot",
+    lockedSnapshotLabel: "Locked",
+    editableSnapshotLabel: "Open",
+    snapshotCompletedLabel: "Completed",
+    snapshotFilesLabel: "Files",
+    snapshotOverviewLabel: "Overview summary",
+    snapshotNoNewFiles: "No new files uploaded for this snapshot yet.",
+    activeSnapshotHint:
+      "Upload the next set of files here, then run diligence to create the next locked snapshot.",
   },
   insights: {
     heading: "Insights",
@@ -214,7 +228,7 @@ export const appLabels: AppLabels["app"] = {
     description: "Manage your firm workspace and provider configuration.",
     accountNavLabel: "Account & firm",
     billingNavLabel: "Billing",
-    apiKeysNavLabel: "API keys",
+    apiKeysNavLabel: "AI connectors",
     workflowsNavLabel: "Workflows",
     accountHeading: "Account & firm",
     accountDescription:
@@ -246,11 +260,56 @@ export const appLabels: AppLabels["app"] = {
     auditDescription:
       "Recent privileged actions in this firm workspace.",
     auditEmpty: "No audit events recorded yet.",
-    apiKeysHeading: "AI Provider Keys",
+    apiKeysHeading: "AI Connectors",
     apiKeysDescription:
-      "Bring your own API keys to power AI features. Keys are encrypted at rest with AES-256 and never returned to the browser.",
+      "Connect cloud API keys or OpenAI-compatible local LLM endpoints to power AI features.",
     encryptionNote:
-      "Keys are stored encrypted. Only you can use them; they are never shared or logged.",
+      "Credentials and connector settings are stored encrypted. They are never shared or logged.",
+    apiKeyConnectors: {
+      providers: {
+        OPENAI: {
+          name: "OpenAI",
+          description: "GPT-4o, o3, and reasoning models",
+          placeholder: "sk-...",
+        },
+        ANTHROPIC: {
+          name: "Anthropic",
+          description: "Claude Sonnet, Opus, and Haiku",
+          placeholder: "sk-ant-api03-...",
+        },
+        GOOGLE: {
+          name: "Google AI",
+          description: "Gemini 2.5 Pro and Flash",
+          placeholder: "AIzaSy...",
+        },
+        LOCAL: {
+          name: "Local LLM",
+          description: "OpenAI-compatible Ollama, LM Studio, or vLLM endpoint",
+          placeholder: "http://localhost:11434/v1",
+        },
+      },
+      connectedStatus: "Connected",
+      notConfiguredStatus: "Not configured",
+      updateCredentialTitle: "Update connector",
+      revokeCredentialTitle: "Remove connector",
+      cancelTitle: "Cancel",
+      pasteNewCredentialPlaceholder: "Paste new key to update",
+      localEndpointLabel: "Endpoint URL",
+      localEndpointPlaceholder: "http://localhost:11434/v1",
+      localApiKeyLabel: "API key",
+      localApiKeyPlaceholder: "Optional bearer token",
+      localApiKeyHint:
+        "Use an endpoint reachable from the app server. Leave the API key blank for unauthenticated local servers.",
+      localEndpointInvalid: "Enter a valid HTTP(S) endpoint URL.",
+      defaultModelLabel: "Default model",
+      enabledLabel: "Connector enabled for diligence jobs",
+      saveSettingsCta: "Save connector settings",
+      saveCta: "Save",
+      savingCta: "Saving...",
+      updateCta: "Update",
+      testConnectionCta: "Test connection",
+      testingConnectionCta: "Testing...",
+    },
     billingHeading: "Billing & plan",
     billingDescription:
       "Manage your subscription, view usage, and upgrade your plan.",

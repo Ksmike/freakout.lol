@@ -6,6 +6,8 @@ const putMock = vi.fn();
 const listMock = vi.fn();
 const projectDocumentUpsertMock = vi.fn();
 const projectDocumentFindManyMock = vi.fn();
+const projectDocumentFindFirstMock = vi.fn();
+const diligenceJobFindFirstMock = vi.fn();
 
 vi.mock("@/lib/auth", () => ({
   auth: authMock,
@@ -24,6 +26,10 @@ vi.mock("@/lib/db", () => ({
     projectDocument: {
       upsert: projectDocumentUpsertMock,
       findMany: projectDocumentFindManyMock,
+      findFirst: projectDocumentFindFirstMock,
+    },
+    diligenceJob: {
+      findFirst: diligenceJobFindFirstMock,
     },
   },
 }));
@@ -62,7 +68,9 @@ describe("projects documents API route", () => {
     vi.clearAllMocks();
     resetRateLimitBucketsForTests();
     projectDocumentFindManyMock.mockResolvedValue([]);
+    projectDocumentFindFirstMock.mockResolvedValue(null);
     projectDocumentUpsertMock.mockResolvedValue({ id: "doc-1" });
+    diligenceJobFindFirstMock.mockResolvedValue(null);
   });
 
   it("uploads a supported private document into user/project path", async () => {
@@ -138,6 +146,41 @@ describe("projects documents API route", () => {
     );
   });
 
+  it("uploads a supported RTF document", async () => {
+    authMock.mockResolvedValue({ user: { id: "user-1" } });
+    putMock.mockResolvedValue({
+      pathname: "firm-1/project-1/nycemail.rtf",
+      url: "https://blob.local/private-url",
+      downloadUrl: "https://blob.local/private-url?download=1",
+    });
+
+    const route = await import("@/app/api/projects/[projectId]/documents/route");
+
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(["{\\rtf1 email body}"], "nycemail.rtf", {
+        type: "application/rtf",
+      })
+    );
+
+    const response = await route.POST(
+      {
+        formData: async () => formData,
+      } as unknown as Request,
+      { params: Promise.resolve({ projectId: "project-1" }) }
+    );
+
+    expect(response.status).toBe(201);
+    expect(putMock).toHaveBeenCalledWith(
+      "firm-1/project-1/nycemail.rtf",
+      expect.any(File),
+      expect.objectContaining({
+        access: "private",
+      })
+    );
+  });
+
   it("rejects unsupported extensions", async () => {
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     const route = await import("@/app/api/projects/[projectId]/documents/route");
@@ -181,6 +224,33 @@ describe("projects documents API route", () => {
     );
 
     expect(response.status).toBe(413);
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects replacing a file from a locked snapshot", async () => {
+    authMock.mockResolvedValue({ user: { id: "user-1" } });
+    diligenceJobFindFirstMock.mockResolvedValue({
+      completedAt: new Date("2026-05-07T00:00:00.000Z"),
+    });
+    projectDocumentFindFirstMock.mockResolvedValue({
+      uploadedAt: new Date("2026-05-06T00:00:00.000Z"),
+    });
+
+    const route = await import("@/app/api/projects/[projectId]/documents/route");
+    const formData = new FormData();
+    formData.set(
+      "file",
+      new File(["replacement"], "report.pdf", { type: "application/pdf" })
+    );
+
+    const response = await route.POST(
+      {
+        formData: async () => formData,
+      } as unknown as Request,
+      { params: Promise.resolve({ projectId: "project-1" }) }
+    );
+
+    expect(response.status).toBe(409);
     expect(putMock).not.toHaveBeenCalled();
   });
 

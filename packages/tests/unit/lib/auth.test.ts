@@ -62,7 +62,7 @@ describe("auth.config", () => {
   it("authConfig does not define callbacks (they live in lib/auth.ts)", async () => {
     const { authConfig } = await import("@/lib/auth.config");
     // Callbacks moved to lib/auth.ts so they can access the DB (Node.js runtime only)
-    expect(authConfig.callbacks).toBeUndefined();
+    expect("callbacks" in authConfig).toBe(false);
   });
 });
 
