@@ -1,10 +1,33 @@
 import { Resend } from "resend";
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY is not set");
+let resendClient: Resend | null = null;
+
+function hasConfiguredValue(value: string | undefined): value is string {
+  return Boolean(value && !value.startsWith("replace-with-"));
 }
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+export function isEmailConfigured(): boolean {
+  return hasConfiguredValue(process.env.RESEND_API_KEY);
+}
+
+function getResend(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!hasConfiguredValue(apiKey)) {
+    throw new Error("RESEND_API_KEY is not configured.");
+  }
+  resendClient ??= new Resend(apiKey);
+  return resendClient;
+}
+
+type SendEmailArgs = Parameters<Resend["emails"]["send"]>;
+
+export const resend = {
+  emails: {
+    send(...args: SendEmailArgs) {
+      return getResend().emails.send(...args);
+    },
+  },
+} as Resend;
 
 // The verified sending domain — update once a custom domain is verified in Resend.
 // For now uses Resend's shared domain for testing.

@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { BillingModel } from "@/lib/models/BillingModel";
 import { FirmModel } from "@/lib/models/FirmModel";
 import { AuditLogModel } from "@/lib/models/AuditLogModel";
@@ -51,6 +51,7 @@ export async function createCheckoutSession(
   if (!session?.user?.id) {
     redirect("/login");
   }
+  const stripe = getStripe();
 
   const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
 
@@ -114,6 +115,7 @@ export async function syncCheckoutSession(
       };
     }
 
+    const stripe = getStripe();
     const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
     const checkoutSession = await stripe.checkout.sessions.retrieve(
       checkoutSessionId,
@@ -236,6 +238,7 @@ export async function createPortalSession(): Promise<{ error?: string } | never>
     return { error: "No billing account found. Subscribe to a plan first." };
   }
 
+  const stripe = getStripe();
   const appUrl = await getRequestAppUrl();
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: customer.stripeCustomerId,
@@ -267,6 +270,7 @@ export async function cancelSubscriptionAtPeriodEnd(): Promise<{
     return {};
   }
 
+  const stripe = getStripe();
   const updated = await stripe.subscriptions.update(
     subscription.stripeSubscriptionId,
     { cancel_at_period_end: true }
@@ -316,6 +320,7 @@ export async function createSeatCheckoutSession(): Promise<never> {
     throw new Error("STRIPE_SEAT_PRICE_ID is not configured.");
   }
 
+  const stripe = getStripe();
   const firm = await FirmModel.getActiveFirmSummaryForUser(session.user.id);
 
   // Check if the firm already has a subscription — if so, add a seat
@@ -397,6 +402,7 @@ export async function removeSeat(): Promise<{ error?: string }> {
     return { error: "No active subscription found." };
   }
 
+  const stripe = getStripe();
   // Retrieve current quantity from Stripe
   const sub = await stripe.subscriptions.retrieve(
     subscription.stripeSubscriptionId,
@@ -489,6 +495,7 @@ export async function getBillingSummary(): Promise<{
 
   if (customer?.stripeCustomerId) {
     try {
+      const stripe = getStripe();
       const subscriptions = await stripe.subscriptions.list({
         customer: customer.stripeCustomerId,
         status: "all",

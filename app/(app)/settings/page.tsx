@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isStripeConfigured } from "@/lib/stripe";
 
 type SettingsIndexPageProps = {
   searchParams: Promise<{
@@ -14,7 +15,7 @@ export default async function SettingsIndexPage({
   const billing = getSearchParam(params.billing);
   const checkoutSessionId = getSearchParam(params.session_id);
 
-  if (billing) {
+  if (billing && isStripeConfigured()) {
     const query = new URLSearchParams({ billing });
     if (checkoutSessionId) query.set("session_id", checkoutSessionId);
     redirect(`/settings/billing?${query.toString()}`);

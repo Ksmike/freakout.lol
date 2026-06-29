@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe, getStripeWebhookSecret } from "@/lib/stripe";
+import { getStripe, getStripeWebhookSecret } from "@/lib/stripe";
 import { BillingModel } from "@/lib/models/BillingModel";
 import { AuditLogModel } from "@/lib/models/AuditLogModel";
 import { db } from "@/lib/db";
@@ -45,6 +45,7 @@ async function handleSubscriptionUpsert(
   const priceItem = subscription.items.data[0];
   const price = priceItem?.price;
   const interval = price?.recurring?.interval ?? "month";
+  const stripe = getStripe();
 
   await BillingModel.upsertSubscription({
     billingCustomerId: customer.id,
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let event: Stripe.Event;
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, sig, getStripeWebhookSecret());
   } catch (err) {
     const message = err instanceof Error ? err.message : "Webhook signature verification failed";

@@ -3,6 +3,7 @@ import { mockDb } from "../../mocks/db";
 import { resetRateLimitBucketsForTests } from "@/lib/security/rate-limit";
 
 const mockResendSend = vi.hoisted(() => vi.fn().mockResolvedValue({ id: "email-1" }));
+const mockIsEmailConfigured = vi.hoisted(() => vi.fn(() => true));
 
 // Mock bcryptjs
 vi.mock("bcryptjs", () => ({
@@ -25,6 +26,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/email", () => ({
   FROM_ADDRESS: "test@example.com",
   getAppUrl: vi.fn().mockReturnValue("https://app.example.com"),
+  isEmailConfigured: mockIsEmailConfigured,
   resend: { emails: { send: mockResendSend } },
 }));
 
@@ -50,6 +52,8 @@ describe("register", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetRateLimitBucketsForTests();
+    mockDb.user.count.mockResolvedValue(1);
+    mockIsEmailConfigured.mockReturnValue(true);
   });
 
   it("returns error when email is missing", async () => {
@@ -145,7 +149,9 @@ describe("register", () => {
         email: "test@example.com",
         name: "Test User",
         password: "hashed_password",
+        emailVerified: null,
         locale: "en",
+        systemRole: "USER",
         notificationPreferences: { email: false },
       },
     });
@@ -198,9 +204,66 @@ describe("register", () => {
         email: "test@example.com",
         name: null,
         password: "hashed_password",
+        emailVerified: null,
         locale: "en",
+        systemRole: "USER",
         notificationPreferences: { email: false },
       },
+    });
+  });
+
+  it("creates the first registered user as a platform admin", async () => {
+    mockDb.user.findUnique.mockResolvedValue(null);
+    mockDb.user.count.mockResolvedValue(0);
+    mockDb.user.create.mockResolvedValue({
+      id: "1",
+      email: "admin@example.com",
+      name: null,
+    });
+
+    const formData = createFormData({
+      email: "admin@example.com",
+      password: "Password123!",
+      acceptedTerms: "on",
+    });
+
+    await register(formData);
+
+    expect(mockDb.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        email: "admin@example.com",
+        systemRole: "ADMIN",
+      }),
+    });
+  });
+
+  it("allows registration without transactional email configured", async () => {
+    mockDb.user.findUnique.mockResolvedValue(null);
+    mockDb.user.create.mockResolvedValue({
+      id: "1",
+      email: "test@example.com",
+      name: null,
+    });
+    mockIsEmailConfigured.mockReturnValue(false);
+
+    const formData = createFormData({
+      email: "test@example.com",
+      password: "Password123!",
+      acceptedTerms: "on",
+    });
+
+    const result = await register(formData);
+
+    expect(mockDb.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        emailVerified: expect.any(Date),
+      }),
+    });
+    expect(mockDb.verificationToken.create).not.toHaveBeenCalled();
+    expect(mockResendSend).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success:
+        "Account created. Email is not configured, so this account is ready to sign in.",
     });
   });
 

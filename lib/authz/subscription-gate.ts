@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { FirmModel } from "@/lib/models/FirmModel";
 import { BillingModel } from "@/lib/models/BillingModel";
+import { isStripeConfigured } from "@/lib/stripe";
 
 export type SubscriptionAccess =
   | { hasAccess: true }
@@ -18,6 +19,10 @@ export async function checkSubscriptionAccess(
 ): Promise<SubscriptionAccess> {
   // Platform admins bypass the paywall
   if (systemRole === "ADMIN") {
+    return { hasAccess: true };
+  }
+
+  if (!isStripeConfigured()) {
     return { hasAccess: true };
   }
 

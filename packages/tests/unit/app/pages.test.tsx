@@ -112,8 +112,9 @@ vi.mock("@/lib/actions/graph", () => ({
 }));
 
 vi.mock("@/lib/stripe", () => ({
-  stripe: {},
+  getStripe: vi.fn(() => ({})),
   getStripeWebhookSecret: vi.fn(),
+  isStripeConfigured: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/actions/billing", () => ({

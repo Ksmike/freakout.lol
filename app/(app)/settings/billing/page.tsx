@@ -6,10 +6,10 @@ import {
   LuPlus,
   LuMinus,
 } from "react-icons/lu";
+import { redirect } from "next/navigation";
 import { CancelSubscriptionForm } from "./CancelSubscriptionForm";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
 import {
-  createCheckoutSession,
   createPortalSession,
   createSeatCheckoutSession,
   removeSeat,
@@ -17,6 +17,7 @@ import {
   syncCheckoutSession,
   type BillingSyncResult,
 } from "@/lib/actions/billing";
+import { isStripeConfigured } from "@/lib/stripe";
 import { getLabelsForLocale } from "@/labels";
 import type { AppLabels } from "@/labels/types";
 
@@ -34,6 +35,10 @@ type BillingSettingsPageProps = {
 export default async function BillingSettingsPage({
   searchParams,
 }: BillingSettingsPageProps) {
+  if (!isStripeConfigured()) {
+    redirect("/settings/account");
+  }
+
   const { labels } = getLabelsForLocale("en");
   const resolvedSearchParams = await searchParams;
   const billingReturn = getSearchParam(resolvedSearchParams.billing);

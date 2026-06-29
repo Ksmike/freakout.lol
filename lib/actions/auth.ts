@@ -10,12 +10,14 @@ import {
   sendEmailChangeVerification,
   sendEmailVerification,
 } from "@/lib/email-verification";
+import { isEmailConfigured } from "@/lib/email";
 import {
   deletePasswordResetToken,
   getPasswordResetTokenStatus,
 } from "@/lib/password-reset";
 import { normalizeEmail } from "@/lib/utils/email";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { SystemRole } from "@/lib/generated/prisma/client";
 
 const PASSWORD_HASH_COST = 14;
 const PASSWORD_MIN_LENGTH = 8;
@@ -95,6 +97,8 @@ export async function register(formData: FormData) {
   }
 
   const hashedPassword = await bcrypt.hash(password, PASSWORD_HASH_COST);
+  const emailConfigured = isEmailConfigured();
+  const isFirstUser = (await db.user.count()) === 0;
 
   let userCreated = false;
   try {
@@ -103,11 +107,20 @@ export async function register(formData: FormData) {
         email,
         name,
         password: hashedPassword,
+        emailVerified: emailConfigured ? null : new Date(),
         locale: "en",
+        systemRole: isFirstUser ? SystemRole.ADMIN : SystemRole.USER,
         notificationPreferences: { email: emailOptIn },
       },
     });
     userCreated = true;
+
+    if (!emailConfigured) {
+      return {
+        success:
+          "Account created. Email is not configured, so this account is ready to sign in.",
+      };
+    }
 
     const verificationToken = await createEmailVerificationToken(email);
     await sendEmailVerification({

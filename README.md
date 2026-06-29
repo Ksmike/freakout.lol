@@ -60,6 +60,12 @@ yarn prisma generate
 yarn dev
 ```
 
+On a fresh database, start the app with `yarn dev`, open the local URL, and
+register the first account. The first registered user is automatically promoted
+to platform admin. If `RESEND_API_KEY` is unset or still a `replace-with-*`
+placeholder, the account is verified immediately so first setup is not blocked
+by email delivery.
+
 `yarn dev` runs local HTTPS using the `mkcert` certificates in `certificates/`.
 Next config sets `WORKFLOW_LOCAL_BASE_URL` for local development based on the
 dev script protocol, so Workflow callbacks match the running server. If the
@@ -91,23 +97,32 @@ yarn dev:https
 
 Configure these in `.env` / `.env.local`:
 
-| Variable                      | Purpose                                            |
-| ----------------------------- | -------------------------------------------------- |
-| `DATABASE_URL`                | Pooled Postgres connection string                  |
-| `DIRECT_URL`                  | Direct Postgres connection string (migrations)     |
-| `AUTH_SECRET`                 | Auth.js secret                                     |
-| `AUTH_URL`                    | App URL (e.g. `https://localhost:3000`)            |
-| `NEXT_PUBLIC_APP_URL`         | Public app origin used by local callbacks          |
-| `WORKFLOW_LOCAL_BASE_URL`     | Optional local Workflow callback origin override   |
-| `AUTH_LINKEDIN_ID`            | LinkedIn OAuth app client ID                       |
-| `AUTH_LINKEDIN_SECRET`        | LinkedIn OAuth app client secret                   |
-| `NEXT_PUBLIC_SENTRY_DSN`      | Sentry DSN for error monitoring                    |
-| `SENTRY_AUTH_TOKEN`           | Sentry auth token for source map uploads (CI only) |
-| `RESEND_API_KEY`              | Resend API key for transactional email             |
-| `STRIPE_SECRET_KEY`           | Stripe secret key                                  |
-| `STRIPE_WEBHOOK_SECRET`       | Stripe webhook signing secret                      |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID` | Default upgrade price ID                           |
-| `BLOB_READ_WRITE_TOKEN`       | Vercel Blob read/write token                       |
+For first local setup, Stripe and Resend can stay unset or as `replace-with-*`
+placeholders. Billing/paywall UI is hidden until Stripe is configured, and
+transactional email is only required once you want real verification, password
+reset, and invite emails.
+
+| Variable                            | Purpose                                                     |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `DATABASE_URL`                      | Pooled Postgres connection string                           |
+| `DIRECT_URL`                        | Direct Postgres connection string (migrations)              |
+| `AUTH_SECRET`                       | Auth.js secret                                              |
+| `AUTH_URL`                          | App URL (e.g. `https://localhost:3000`)                     |
+| `NEXT_PUBLIC_APP_URL`               | Public app origin used by local callbacks                   |
+| `WORKFLOW_LOCAL_BASE_URL`           | Optional local Workflow callback origin override            |
+| `AUTH_LINKEDIN_ID`                  | LinkedIn OAuth app client ID                                |
+| `AUTH_LINKEDIN_SECRET`              | LinkedIn OAuth app client secret                            |
+| `NEXT_PUBLIC_SENTRY_DSN`            | Sentry DSN for error monitoring                             |
+| `SENTRY_AUTH_TOKEN`                 | Sentry auth token for source map uploads (CI only)          |
+| `RESEND_API_KEY`                    | Optional Resend API key for transactional email             |
+| `STRIPE_SECRET_KEY`                 | Optional Stripe secret key; enables billing with a seat ID  |
+| `STRIPE_WEBHOOK_SECRET`             | Optional Stripe webhook signing secret                      |
+| `STRIPE_SEAT_PRICE_ID`              | Optional per-seat Stripe checkout price ID                  |
+| `NEXT_PUBLIC_STRIPE_SEAT_PRICE_ID`  | Optional public fallback for the per-seat price ID          |
+| `STRIPE_PRO_PRICE_ID`               | Optional Stripe price ID mapped to the pro plan             |
+| `STRIPE_GROWTH_PRICE_ID`            | Optional Stripe price ID mapped to the growth plan          |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID`       | Legacy/default Stripe growth price fallback                 |
+| `BLOB_READ_WRITE_TOKEN`             | Vercel Blob read/write token                                |
 
 ## Prisma Workflow
 

@@ -55,6 +55,7 @@ vi.mock("@/lib/email", () => ({
   resend: { emails: { send: vi.fn().mockResolvedValue({ id: "email-1" }) } },
   FROM_ADDRESS: "test@example.com",
   getAppUrl: vi.fn().mockReturnValue("https://localhost:3000"),
+  isEmailConfigured: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/emails/render-invite", () => ({

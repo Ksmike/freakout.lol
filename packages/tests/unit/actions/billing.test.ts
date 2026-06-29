@@ -69,7 +69,8 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 vi.mock("@/lib/stripe", () => ({
-  stripe: mocks.stripe,
+  getStripe: vi.fn(() => mocks.stripe),
+  isStripeConfigured: vi.fn(() => true),
 }));
 
 vi.mock("@/lib/models/BillingModel", () => {

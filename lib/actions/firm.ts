@@ -11,7 +11,7 @@ import { AuditLogModel } from "@/lib/models/AuditLogModel";
 import { FirmModel } from "@/lib/models/FirmModel";
 import { InvitationModel } from "@/lib/models/InvitationModel";
 import { AuditAction, FirmRole } from "@/lib/generated/prisma/client";
-import { resend, FROM_ADDRESS, getAppUrl } from "@/lib/email";
+import { resend, FROM_ADDRESS, getAppUrl, isEmailConfigured } from "@/lib/email";
 import { renderInviteEmail } from "@/lib/emails/render-invite";
 import { inviteEmailText } from "@/lib/emails/invite";
 import {
@@ -173,6 +173,10 @@ export async function addFirmMemberByEmail(
 
   if (!result.added) {
     // User not registered — send an email invitation instead
+    if (!isEmailConfigured()) {
+      return { error: "Email is not configured. Add the user after they register." };
+    }
+
     const session2 = await auth();
     const inviterName = session2?.user?.name ?? session2?.user?.email ?? "A team member";
 
