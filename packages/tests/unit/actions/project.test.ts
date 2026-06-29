@@ -326,9 +326,28 @@ describe("startProjectDueDiligence", () => {
     expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("does not start a duplicate workflow for an active job", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mockProjectModel.updateStatusForUser.mockResolvedValue(true);
+    mockFindLatestForProject.mockResolvedValueOnce({
+      id: "job-1",
+      status: "RUNNING",
+    });
+
+    const result = await startProjectDueDiligence("project-1");
+
+    expect(result).toEqual({ jobId: "job-1" });
+    expect(mockListEnabledForUser).not.toHaveBeenCalled();
+    expect(mockCreateDiligenceJob).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/project/project-1");
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/dashboard");
+  });
+
   it("reverts project status when no enabled provider keys exist", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } });
     mockProjectModel.updateStatusForUser.mockResolvedValue(true);
+    mockFindLatestForProject.mockResolvedValue(null);
     mockListEnabledForUser.mockResolvedValue([]);
 
     const result = await startProjectDueDiligence("project-1");

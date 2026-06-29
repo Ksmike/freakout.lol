@@ -1,5 +1,9 @@
 import { FatalError, getWorkflowMetadata } from "workflow";
-import type { DiligenceStageName } from "@/lib/generated/prisma/client";
+import {
+  DiligenceJobStatus,
+  type DiligenceStageName,
+  DiligenceStageStatus,
+} from "@/lib/generated/prisma/client";
 import { DiligenceFatalError } from "@/lib/diligence/errors";
 
 export type DiligenceWorkflowInput = {
@@ -54,6 +58,43 @@ async function attachRunIdToJob(input: {
   });
 }
 
+async function failJobAfterWorkflowError(input: {
+  jobId: string;
+  userId: string;
+  errorMessage: string;
+}): Promise<void> {
+  "use step";
+
+  const { db } = await import("@/lib/db");
+  const now = new Date();
+  await Promise.all([
+    db.diligenceStageRun.updateMany({
+      where: {
+        jobId: input.jobId,
+        status: DiligenceStageStatus.RUNNING,
+      },
+      data: {
+        status: DiligenceStageStatus.FAILED,
+        errorMessage: input.errorMessage,
+        completedAt: now,
+      },
+    }),
+    db.diligenceJob.updateMany({
+      where: {
+        id: input.jobId,
+        userId: input.userId,
+        status: { in: [DiligenceJobStatus.QUEUED, DiligenceJobStatus.RUNNING] },
+      },
+      data: {
+        status: DiligenceJobStatus.FAILED,
+        errorMessage: input.errorMessage,
+        completedAt: now,
+        lastHeartbeatAt: now,
+      },
+    }),
+  ]);
+}
+
 export async function diligenceWorkflow(
   input: DiligenceWorkflowInput
 ): Promise<{ jobId: string; completed: boolean; stagesRun: number }> {
@@ -67,18 +108,29 @@ export async function diligenceWorkflow(
   });
 
   let stagesRun = 0;
-  while (true) {
-    const result = await runStage({
+  try {
+    while (true) {
+      const result = await runStage({
+        jobId: input.jobId,
+        userId: input.userId,
+      });
+      stagesRun += 1;
+
+      if (result.status === "completed") {
+        return { jobId: input.jobId, completed: true, stagesRun };
+      }
+      if (result.status === "waiting_input") {
+        return { jobId: input.jobId, completed: false, stagesRun };
+      }
+    }
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Diligence workflow failed.";
+    await failJobAfterWorkflowError({
       jobId: input.jobId,
       userId: input.userId,
+      errorMessage,
     });
-    stagesRun += 1;
-
-    if (result.status === "completed") {
-      return { jobId: input.jobId, completed: true, stagesRun };
-    }
-    if (result.status === "waiting_input") {
-      return { jobId: input.jobId, completed: false, stagesRun };
-    }
+    throw error;
   }
 }

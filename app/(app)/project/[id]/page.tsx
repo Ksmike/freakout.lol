@@ -42,11 +42,16 @@ export default async function ProjectInspectPage({
   const hasAnyApiKeys = apiKeyStatuses.some(
     (status) => status.isSet && status.enabled
   );
-  const staleWorkflowStart = await DiligenceJobModel.failStaleWorkflowStartForProject({
-    projectId: project.id,
-    userId: session.user.id,
-  });
-  if (staleWorkflowStart) {
+  const staleWorkflowRepair =
+    (await DiligenceJobModel.failStaleWorkflowStartForProject({
+      projectId: project.id,
+      userId: session.user.id,
+    })) ??
+    (await DiligenceJobModel.failStaleActiveWorkflowForProject({
+      projectId: project.id,
+      userId: session.user.id,
+    }));
+  if (staleWorkflowRepair) {
     project =
       (await ProjectModel.findByIdForUser({
         projectId: id,

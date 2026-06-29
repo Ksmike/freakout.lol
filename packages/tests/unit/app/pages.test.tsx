@@ -177,6 +177,7 @@ vi.mock("@/lib/models/ProjectModel", () => ({
 
 const mockDiligenceJobModel = {
   failStaleWorkflowStartForProject: vi.fn().mockResolvedValue(null),
+  failStaleActiveWorkflowForProject: vi.fn().mockResolvedValue(null),
   findLatestWithStagesForProject: vi.fn().mockResolvedValue(null),
   getCompletedSnapshotsForProject: vi.fn().mockResolvedValue([]),
 };

@@ -288,6 +288,33 @@ export async function startProjectDueDiligence(
     return { error: "Project not found." };
   }
 
+  const [
+    { ModelRouter },
+    { UserApiKeyModel },
+    { DiligenceJobModel },
+    { ProjectDocumentModel },
+  ] =
+    await Promise.all([
+      import("@/lib/diligence/model-router"),
+      import("@/lib/models/UserApiKeyModel"),
+      import("@/lib/models/DiligenceJobModel"),
+      import("@/lib/models/ProjectDocumentModel"),
+    ]);
+
+  const existingJob = await DiligenceJobModel.findLatestForProject({
+    projectId,
+    userId: session.user.id,
+  });
+
+  if (
+    existingJob?.status === DiligenceJobStatus.QUEUED ||
+    existingJob?.status === DiligenceJobStatus.RUNNING
+  ) {
+    revalidatePath(`/project/${projectId}`);
+    revalidatePath("/dashboard");
+    return { jobId: existingJob.id };
+  }
+
   // Entitlement check: monthly run limit
   const firm = await FirmModel.ensureDefaultForUser(session.user.id);
   const runCheck = await BillingModel.checkWorkflowRun(firm.firmId);
@@ -300,21 +327,6 @@ export async function startProjectDueDiligence(
     });
     return { error: runCheck.reason };
   }
-
-  const [
-    { DiligenceJobStatus },
-    { ModelRouter },
-    { UserApiKeyModel },
-    { DiligenceJobModel },
-    { ProjectDocumentModel },
-  ] =
-    await Promise.all([
-      import("@/lib/generated/prisma/client"),
-      import("@/lib/diligence/model-router"),
-      import("@/lib/models/UserApiKeyModel"),
-      import("@/lib/models/DiligenceJobModel"),
-      import("@/lib/models/ProjectDocumentModel"),
-    ]);
 
   const enabledKeys = await UserApiKeyModel.listEnabledForUser(session.user.id);
   if (enabledKeys.length === 0) {
@@ -349,11 +361,6 @@ export async function startProjectDueDiligence(
     revalidatePath("/dashboard");
     return { error: message };
   }
-
-  const existingJob = await DiligenceJobModel.findLatestForProject({
-    projectId,
-    userId: session.user.id,
-  });
 
   const priority = options?.priority ?? 0;
   const workflowReadinessError = await getLocalWorkflowReadinessError();

@@ -3,7 +3,7 @@ import {
   type ApiKeyProvider,
   DiligenceJobStatus,
   type DiligenceStageName,
-  type DiligenceStageStatus,
+  DiligenceStageStatus,
   ProjectStatus,
 } from "@/lib/generated/prisma/client";
 import { asNullableString, asRecord } from "@/lib/utils/coerce";
@@ -67,6 +67,8 @@ export type RestrictedDiligenceInsights = {
 const VISIBLE_FINDING_SEVERITIES = new Set(["critical", "high", "medium", "low"]);
 const STALE_WORKFLOW_START_ERROR =
   "The diligence workflow did not start. Check the local Workflow callback URL, restart the dev server, then retry diligence.";
+const STALE_WORKFLOW_HEARTBEAT_ERROR =
+  "The diligence workflow stopped making progress. Retry diligence to resume from the last completed stage.";
 
 function getVisibleFindingSeverity(metadata: unknown): string | null {
   const severity = asNullableString(asRecord(metadata).severity)?.toLowerCase() ?? null;
@@ -104,6 +106,15 @@ function getWorkflowStartTimeoutMs(): number {
   }
 
   return process.env.VERCEL_DEPLOYMENT_ID ? 120_000 : 15_000;
+}
+
+function getWorkflowHeartbeatTimeoutMs(): number {
+  const configured = Number(process.env.DILIGENCE_WORKFLOW_HEARTBEAT_TIMEOUT_MS);
+  if (Number.isFinite(configured) && configured > 0) {
+    return configured;
+  }
+
+  return 30 * 60 * 1000;
 }
 
 export const DiligenceJobModel = {
@@ -327,21 +338,105 @@ export const DiligenceJobModel = {
     }
 
     const now = new Date();
-    const [jobUpdate] = await db.$transaction([
-      db.diligenceJob.updateMany({
+    const jobUpdate = await db.diligenceJob.updateMany({
+      where: {
+        id: staleJob.id,
+        projectId: input.projectId,
+        userId: input.userId,
+        status: DiligenceJobStatus.QUEUED,
+        workflowRunId: null,
+        updatedAt: { lt: cutoff },
+      },
+      data: {
+        status: DiligenceJobStatus.FAILED,
+        errorMessage: STALE_WORKFLOW_START_ERROR,
+        completedAt: now,
+        lastHeartbeatAt: now,
+      },
+    });
+
+    if (jobUpdate.count === 0) {
+      return null;
+    }
+
+    await db.project.updateMany({
+      where: {
+        id: input.projectId,
+        status: ProjectStatus.IN_PROGRESS,
+        diligenceJobs: {
+          some: {
+            id: staleJob.id,
+            userId: input.userId,
+          },
+        },
+      },
+      data: { status: ProjectStatus.DRAFT },
+    });
+
+    return {
+      jobId: staleJob.id,
+      errorMessage: STALE_WORKFLOW_START_ERROR,
+    };
+  },
+
+  async failStaleActiveWorkflowForProject(input: {
+    projectId: string;
+    userId: string;
+  }): Promise<{ jobId: string; errorMessage: string } | null> {
+    const cutoff = new Date(Date.now() - getWorkflowHeartbeatTimeoutMs());
+    const staleJob = await db.diligenceJob.findFirst({
+      where: {
+        projectId: input.projectId,
+        userId: input.userId,
+        status: { in: [DiligenceJobStatus.QUEUED, DiligenceJobStatus.RUNNING] },
+        OR: [
+          { lastHeartbeatAt: { lt: cutoff } },
+          { lastHeartbeatAt: null, updatedAt: { lt: cutoff } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+
+    if (!staleJob) {
+      return null;
+    }
+
+    const activeWhere = {
+      id: staleJob.id,
+      projectId: input.projectId,
+      userId: input.userId,
+      status: { in: [DiligenceJobStatus.QUEUED, DiligenceJobStatus.RUNNING] },
+      OR: [
+        { lastHeartbeatAt: { lt: cutoff } },
+        { lastHeartbeatAt: null, updatedAt: { lt: cutoff } },
+      ],
+    };
+    const now = new Date();
+    const jobUpdate = await db.diligenceJob.updateMany({
+      where: activeWhere,
+      data: {
+        status: DiligenceJobStatus.FAILED,
+        errorMessage: STALE_WORKFLOW_HEARTBEAT_ERROR,
+        completedAt: now,
+        lastHeartbeatAt: now,
+      },
+    });
+
+    if (jobUpdate.count === 0) {
+      return null;
+    }
+
+    await Promise.all([
+      db.diligenceStageRun.updateMany({
         where: {
-          id: staleJob.id,
-          projectId: input.projectId,
-          userId: input.userId,
-          status: DiligenceJobStatus.QUEUED,
-          workflowRunId: null,
-          updatedAt: { lt: cutoff },
+          jobId: staleJob.id,
+          status: DiligenceStageStatus.RUNNING,
         },
         data: {
-          status: DiligenceJobStatus.FAILED,
-          errorMessage: STALE_WORKFLOW_START_ERROR,
+          status: DiligenceStageStatus.FAILED,
+          errorMessage: STALE_WORKFLOW_HEARTBEAT_ERROR,
           completedAt: now,
-          lastHeartbeatAt: now,
         },
       }),
       db.project.updateMany({
@@ -359,13 +454,9 @@ export const DiligenceJobModel = {
       }),
     ]);
 
-    if (jobUpdate.count === 0) {
-      return null;
-    }
-
     return {
       jobId: staleJob.id,
-      errorMessage: STALE_WORKFLOW_START_ERROR,
+      errorMessage: STALE_WORKFLOW_HEARTBEAT_ERROR,
     };
   },
 

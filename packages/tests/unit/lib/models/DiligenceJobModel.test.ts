@@ -13,6 +13,7 @@ const mockProject = {
 
 const mockDiligenceStageRun = {
   findMany: vi.fn(),
+  updateMany: vi.fn(),
 };
 
 const mockDiligenceFinding = {
@@ -62,6 +63,10 @@ vi.mock("@/lib/generated/prisma/client", () => ({
   DiligenceStageName: {
     DOCUMENT_EXTRACTION: "DOCUMENT_EXTRACTION",
     ENTITY_EXTRACTION: "ENTITY_EXTRACTION",
+  },
+  DiligenceStageStatus: {
+    RUNNING: "RUNNING",
+    FAILED: "FAILED",
   },
   ProjectStatus: {
     DRAFT: "DRAFT",
@@ -249,6 +254,54 @@ describe("DiligenceJobModel", () => {
       expect(result).toBeNull();
       expect(mockDiligenceJob.updateMany).not.toHaveBeenCalled();
       expect(mockProject.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("failStaleActiveWorkflowForProject", () => {
+    it("marks stale active jobs failed and fails the running stage", async () => {
+      mockDiligenceJob.findFirst.mockResolvedValue({ id: "job-active" });
+      mockDiligenceStageRun.updateMany.mockResolvedValue({ count: 1 });
+      mockDiligenceJob.updateMany.mockResolvedValue({ count: 1 });
+      mockProject.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await DiligenceJobModel.failStaleActiveWorkflowForProject({
+        projectId: "project-1",
+        userId: "user-1",
+      });
+
+      expect(result).toEqual({
+        jobId: "job-active",
+        errorMessage: expect.stringContaining("stopped making progress"),
+      });
+      expect(mockDiligenceJob.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: "project-1",
+            userId: "user-1",
+            status: { in: ["QUEUED", "RUNNING"] },
+          }),
+        })
+      );
+      expect(mockDiligenceStageRun.updateMany).toHaveBeenCalledWith({
+        where: {
+          jobId: "job-active",
+          status: "RUNNING",
+        },
+        data: expect.objectContaining({
+          status: "FAILED",
+          errorMessage: expect.stringContaining("stopped making progress"),
+          completedAt: expect.any(Date),
+        }),
+      });
+      expect(mockDiligenceJob.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: "job-active" }),
+          data: expect.objectContaining({
+            status: "FAILED",
+            errorMessage: expect.stringContaining("stopped making progress"),
+          }),
+        })
+      );
     });
   });
 

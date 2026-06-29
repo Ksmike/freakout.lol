@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockRunNextStage = vi.fn();
 const mockUpdateMany = vi.fn();
+const mockStageRunUpdateMany = vi.fn();
 
 vi.mock("workflow", () => ({
   FatalError: class FatalError extends Error {
@@ -24,13 +25,25 @@ vi.mock("@/lib/db", () => ({
     diligenceJob: {
       updateMany: mockUpdateMany,
     },
+    diligenceStageRun: {
+      updateMany: mockStageRunUpdateMany,
+    },
   },
 }));
 
 vi.mock("@/lib/generated/prisma/client", () => ({
+  DiligenceJobStatus: {
+    QUEUED: "QUEUED",
+    RUNNING: "RUNNING",
+    FAILED: "FAILED",
+  },
   DiligenceStageName: {
     DOCUMENT_EXTRACTION: "DOCUMENT_EXTRACTION",
     DOCUMENT_CLASSIFICATION: "DOCUMENT_CLASSIFICATION",
+  },
+  DiligenceStageStatus: {
+    RUNNING: "RUNNING",
+    FAILED: "FAILED",
   },
 }));
 
@@ -140,6 +153,28 @@ describe("diligenceWorkflow", () => {
     await expect(
       diligenceWorkflow({ jobId: "job-1", userId: "user-1", priority: 1 })
     ).rejects.toThrow("Network timeout");
+
+    expect(mockStageRunUpdateMany).toHaveBeenCalledWith({
+      where: { jobId: "job-1", status: "RUNNING" },
+      data: expect.objectContaining({
+        status: "FAILED",
+        errorMessage: "Network timeout",
+        completedAt: expect.any(Date),
+      }),
+    });
+    expect(mockUpdateMany).toHaveBeenLastCalledWith({
+      where: {
+        id: "job-1",
+        userId: "user-1",
+        status: { in: ["QUEUED", "RUNNING"] },
+      },
+      data: expect.objectContaining({
+        status: "FAILED",
+        errorMessage: "Network timeout",
+        completedAt: expect.any(Date),
+        lastHeartbeatAt: expect.any(Date),
+      }),
+    });
   });
 
   it("treats stage-enum mismatch as fatal", async () => {
